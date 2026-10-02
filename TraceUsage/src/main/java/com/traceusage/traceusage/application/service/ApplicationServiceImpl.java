@@ -2,6 +2,7 @@ package com.traceusage.traceusage.application.service;
 
 import com.traceusage.traceusage.apikey.entity.ApiKey;
 import com.traceusage.traceusage.apikey.repository.ApiKeyRepository;
+import com.traceusage.traceusage.apikey.service.ApiKeyHashService;
 import com.traceusage.traceusage.application.dto.ApplicationResponse;
 import com.traceusage.traceusage.application.dto.CreateApplicationRequest;
 import com.traceusage.traceusage.application.dto.CreateApplicationResponse;
@@ -13,7 +14,6 @@ import com.traceusage.traceusage.user.entity.User;
 import com.traceusage.traceusage.user.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,18 +29,18 @@ public class ApplicationServiceImpl implements ApplicationService {
     private final ApiKeyRepository apiKeyRepository;
     private final UserRepository userRepository;
     private final ApplicationCredentialGenerator credentialGenerator;
-    private final PasswordEncoder passwordEncoder;
+    private final ApiKeyHashService apiKeyHashService;
 
     public ApplicationServiceImpl(ApplicationRepository applicationRepository,
                                   ApiKeyRepository apiKeyRepository,
                                   UserRepository userRepository,
                                   ApplicationCredentialGenerator credentialGenerator,
-                                  PasswordEncoder passwordEncoder) {
+                                  ApiKeyHashService apiKeyHashService) {
         this.applicationRepository = applicationRepository;
         this.apiKeyRepository = apiKeyRepository;
         this.userRepository = userRepository;
         this.credentialGenerator = credentialGenerator;
-        this.passwordEncoder = passwordEncoder;
+        this.apiKeyHashService = apiKeyHashService;
     }
 
     @Override
@@ -60,7 +60,7 @@ public class ApplicationServiceImpl implements ApplicationService {
         ApiKey apiKey = ApiKey.create(
                 savedApplication,
                 credentialGenerator.extractPrefix(rawApiKey),
-                passwordEncoder.encode(rawApiKey));
+                apiKeyHashService.hash(rawApiKey));
         apiKeyRepository.save(apiKey);
 
         return CreateApplicationResponse.from(savedApplication, rawApiKey);

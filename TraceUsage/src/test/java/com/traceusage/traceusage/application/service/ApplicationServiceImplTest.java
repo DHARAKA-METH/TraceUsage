@@ -2,6 +2,7 @@ package com.traceusage.traceusage.application.service;
 
 import com.traceusage.traceusage.apikey.entity.ApiKey;
 import com.traceusage.traceusage.apikey.repository.ApiKeyRepository;
+import com.traceusage.traceusage.apikey.service.ApiKeyHashService;
 import com.traceusage.traceusage.application.dto.CreateApplicationRequest;
 import com.traceusage.traceusage.application.entity.Application;
 import com.traceusage.traceusage.application.exception.ApplicationNotFoundException;
@@ -16,7 +17,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
 import java.util.Optional;
@@ -43,7 +43,7 @@ class ApplicationServiceImplTest {
     private ApplicationCredentialGenerator credentialGenerator;
 
     @Mock
-    private PasswordEncoder passwordEncoder;
+    private ApiKeyHashService apiKeyHashService;
 
     @InjectMocks
     private ApplicationServiceImpl applicationService;
@@ -59,7 +59,7 @@ class ApplicationServiceImplTest {
         when(credentialGenerator.generateApiKey()).thenReturn("tru_sk_raw-secret-value");
         when(credentialGenerator.extractPrefix("tru_sk_raw-secret-value"))
                 .thenReturn("tru_sk_raw-secret");
-        when(passwordEncoder.encode("tru_sk_raw-secret-value")).thenReturn("stored-hash");
+        when(apiKeyHashService.hash("tru_sk_raw-secret-value")).thenReturn("stored-hash");
 
         var response = applicationService.create(
                 7L, new CreateApplicationRequest(" Product Service ", "DEVELOPMENT"));
