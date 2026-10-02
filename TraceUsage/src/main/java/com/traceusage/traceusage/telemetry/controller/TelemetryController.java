@@ -1,9 +1,8 @@
 package com.traceusage.traceusage.telemetry.controller;
 
 import com.traceusage.traceusage.shared.response.ApiResponse;
-import com.traceusage.traceusage.telemetry.dto.IdentifiedApplicationResponse;
+import com.traceusage.traceusage.telemetry.dto.BatchUsageEventRequest;
 import com.traceusage.traceusage.telemetry.dto.UsageEventRequest;
-import com.traceusage.traceusage.telemetry.service.TelemetryAuthenticationService;
 import com.traceusage.traceusage.telemetry.service.TelemetryService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -21,12 +20,9 @@ public class TelemetryController {
     private static final String API_KEY_HEADER = "X-TraceUsage-Key";
 
     private final TelemetryService telemetryService;
-    private final TelemetryAuthenticationService telemetryAuthenticationService;
 
-    public TelemetryController(TelemetryService telemetryService,
-                               TelemetryAuthenticationService telemetryAuthenticationService) {
+    public TelemetryController(TelemetryService telemetryService) {
         this.telemetryService = telemetryService;
-        this.telemetryAuthenticationService = telemetryAuthenticationService;
     }
 
     @PostMapping
@@ -39,14 +35,11 @@ public class TelemetryController {
     }
 
     @PostMapping("/batch")
-    public ApiResponse<IdentifiedApplicationResponse> identifyBatchEventApplication(
-            @RequestHeader(name = API_KEY_HEADER, required = false) String apiKey) {
-        return identify(apiKey);
-    }
-
-    private ApiResponse<IdentifiedApplicationResponse> identify(String apiKey) {
-        return ApiResponse.success(
-                "Application identified successfully",
-                telemetryAuthenticationService.identifyApplication(apiKey));
+    public ResponseEntity<ApiResponse<Void>> collectBatch(
+            @RequestHeader(name = API_KEY_HEADER, required = false) String apiKey,
+            @Valid @RequestBody BatchUsageEventRequest request) {
+        telemetryService.collectBatch(apiKey, request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Events collected successfully", null));
     }
 }

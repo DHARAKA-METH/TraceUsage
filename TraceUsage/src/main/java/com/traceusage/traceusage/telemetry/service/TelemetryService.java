@@ -1,8 +1,11 @@
 package com.traceusage.traceusage.telemetry.service;
 
+import com.traceusage.traceusage.telemetry.dto.BatchUsageEventRequest;
 import com.traceusage.traceusage.telemetry.dto.UsageEventRequest;
 
 public interface TelemetryService {
 
     void collect(String apiKey, UsageEventRequest request);
+
+    void collectBatch(String apiKey, BatchUsageEventRequest request);
 }

@@ -3,8 +3,6 @@ package com.traceusage.traceusage.telemetry.controller;
 import com.traceusage.traceusage.apikey.exception.InvalidApiKeyException;
 import com.traceusage.traceusage.auth.config.SecurityConfig;
 import com.traceusage.traceusage.auth.security.JwtService;
-import com.traceusage.traceusage.telemetry.dto.IdentifiedApplicationResponse;
-import com.traceusage.traceusage.telemetry.service.TelemetryAuthenticationService;
 import com.traceusage.traceusage.telemetry.service.TelemetryService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +16,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -34,9 +31,6 @@ class TelemetryControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
-
-    @MockitoBean
-    private TelemetryAuthenticationService telemetryAuthenticationService;
 
     @MockitoBean
     private TelemetryService telemetryService;
@@ -68,15 +62,33 @@ class TelemetryControllerTest {
     }
 
     @Test
-    void identifyBatchEvent_withValidApiKeyAndNoJwt_shouldReturnApplication() throws Exception {
-        when(telemetryAuthenticationService.identifyApplication("tru_sk_valid"))
-                .thenReturn(new IdentifiedApplicationResponse(
-                        1L, "Product Service", "development", "proj_test"));
-
+    void collectBatchEvent_withValidApiKeyAndNoJwt_shouldReturnCreated() throws Exception {
         mockMvc.perform(post("/api/v1/events/batch")
-                        .header("X-TraceUsage-Key", "tru_sk_valid"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                        .header("X-TraceUsage-Key", "tru_sk_valid")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "events": [
+                                    {
+                                      "eventId": "f83284af-6427-4f42-a713-29dd41449915",
+                                      "method": "GET",
+                                      "endpoint": "/api/products/{id}",
+                                      "statusCode": 200,
+                                      "occurredAt": "2026-10-02T09:00:00Z"
+                                    },
+                                    {
+                                      "eventId": "aee69442-b1f7-44bc-9372-840755a3e2ba",
+                                      "method": "POST",
+                                      "endpoint": "/api/products",
+                                      "statusCode": 201,
+                                      "occurredAt": "2026-10-02T09:00:01Z"
+                                    }
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Events collected successfully"));
     }
 
     @Test
@@ -133,6 +145,38 @@ class TelemetryControllerTest {
                                   "method": "",
                                   "endpoint": "",
                                   "statusCode": 99
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Request validation failed"));
+    }
+
+    @Test
+    void collectBatchEvent_withEmptyEvents_shouldReturnBadRequest() throws Exception {
+        mockMvc.perform(post("/api/v1/events/batch")
+                        .header("X-TraceUsage-Key", "tru_sk_valid")
+                        .contentType("application/json")
+                        .content("{\"events\":[]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Request validation failed"));
+    }
+
+    @Test
+    void collectBatchEvent_withInvalidNestedEvent_shouldReturnBadRequest() throws Exception {
+        mockMvc.perform(post("/api/v1/events/batch")
+                        .header("X-TraceUsage-Key", "tru_sk_valid")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "events": [
+                                    {
+                                      "method": "",
+                                      "endpoint": "",
+                                      "statusCode": 99
+                                    }
+                                  ]
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
