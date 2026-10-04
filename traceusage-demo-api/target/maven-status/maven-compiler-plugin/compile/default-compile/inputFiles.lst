@@ -1,6 +1,10 @@
 C:\Users\MSI\Desktop\GitHub\TraceUsage\traceusage-demo-api\src\main\java\com\demo\controller\ProductController.java
-C:\Users\MSI\Desktop\GitHub\TraceUsage\traceusage-demo-api\src\main\java\com\demo\traceusage\HttpTelemetryPublisher.java
+C:\Users\MSI\Desktop\GitHub\TraceUsage\traceusage-demo-api\src\main\java\com\demo\traceusage\BatchUsageEventRequest.java
+C:\Users\MSI\Desktop\GitHub\TraceUsage\traceusage-demo-api\src\main\java\com\demo\traceusage\QueueTelemetryPublisher.java
+C:\Users\MSI\Desktop\GitHub\TraceUsage\traceusage-demo-api\src\main\java\com\demo\traceusage\TelemetryHttpClient.java
 C:\Users\MSI\Desktop\GitHub\TraceUsage\traceusage-demo-api\src\main\java\com\demo\traceusage\TelemetryPublisher.java
+C:\Users\MSI\Desktop\GitHub\TraceUsage\traceusage-demo-api\src\main\java\com\demo\traceusage\TelemetryQueue.java
+C:\Users\MSI\Desktop\GitHub\TraceUsage\traceusage-demo-api\src\main\java\com\demo\traceusage\TelemetryWorker.java
 C:\Users\MSI\Desktop\GitHub\TraceUsage\traceusage-demo-api\src\main\java\com\demo\traceusage\TraceUsageConfig.java
 C:\Users\MSI\Desktop\GitHub\TraceUsage\traceusage-demo-api\src\main\java\com\demo\traceusage\TraceUsageInterceptor.java
 C:\Users\MSI\Desktop\GitHub\TraceUsage\traceusage-demo-api\src\main\java\com\demo\traceusage\TraceUsageProperties.java
