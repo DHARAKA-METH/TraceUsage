@@ -30,14 +30,17 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                                                           String projectId,
                                                           Instant from,
                                                           Instant to) {
+        Instant effectiveFrom = from == null ? Instant.EPOCH : from;
+        Instant effectiveTo = to == null ? Instant.now() : to;
+
         Application application = applicationRepository
                 .findByProjectIdAndOwnerId(projectId, ownerId)
                 .orElseThrow(ApplicationNotFoundException::new);
 
         List<EndpointAnalyticsItem> endpoints = usageEventRepository.findEndpointAnalytics(
                 application.getId(),
-                from,
-                to);
+                effectiveFrom,
+                effectiveTo);
 
         return new EndpointAnalyticsResponse(
                 application.getProjectId(),

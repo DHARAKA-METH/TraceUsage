@@ -37,8 +37,8 @@ public interface UsageEventRepository extends JpaRepository<UsageEvent, Long> {
             )
             from UsageEvent u
             where u.application.id = :applicationId
-              and (:from is null or u.occurredAt >= :from)
-              and (:to is null or u.occurredAt <= :to)
+              and u.occurredAt >= :from
+              and u.occurredAt <= :to
             group by u.httpMethod, u.endpoint
             order by count(u) desc, max(u.occurredAt) desc
             """)

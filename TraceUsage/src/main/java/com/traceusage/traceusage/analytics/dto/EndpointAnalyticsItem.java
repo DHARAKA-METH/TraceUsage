@@ -5,8 +5,8 @@ import java.time.Instant;
 public record EndpointAnalyticsItem(
         String method,
         String endpoint,
-        long totalRequests,
-        long successCount,
-        long failureCount,
+        Long totalRequests,
+        Long successCount,
+        Long failureCount,
         Instant lastSeen) {
 }
