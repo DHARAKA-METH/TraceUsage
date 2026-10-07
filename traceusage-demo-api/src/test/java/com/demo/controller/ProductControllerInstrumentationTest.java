@@ -1,11 +1,13 @@
 package com.demo.controller;
 
-import com.demo.traceusage.TelemetryPublisher;
-import com.demo.traceusage.UsageEvent;
+import com.traceusage.sdk.config.TraceUsageAutoConfiguration;
+import com.traceusage.sdk.service.TelemetryPublisher;
+import com.traceusage.sdk.telemetry.UsageEvent;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Import;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -18,7 +20,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ProductController.class)
-@Import(com.demo.traceusage.TraceUsageConfig.class)
+@ImportAutoConfiguration(TraceUsageAutoConfiguration.class)
+@TestPropertySource(properties = {
+        "traceusage.enabled=true",
+        "traceusage.api-key=test-api-key",
+        "traceusage.server-url=http://localhost:8080"
+})
 class ProductControllerInstrumentationTest {
 
     @Autowired

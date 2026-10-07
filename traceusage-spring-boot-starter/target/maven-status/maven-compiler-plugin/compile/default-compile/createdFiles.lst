@@ -1,0 +1,11 @@
+com/traceusage/sdk/telemetry/TelemetryHttpClient.class
+com/traceusage/sdk/telemetry/UsageEvent.class
+com/traceusage/sdk/interceptor/TraceUsageInterceptor.class
+META-INF/spring-configuration-metadata.json
+com/traceusage/sdk/telemetry/BatchUsageEventRequest.class
+com/traceusage/sdk/config/TraceUsageAutoConfiguration.class
+com/traceusage/sdk/telemetry/TelemetryWorker.class
+com/traceusage/sdk/service/TelemetryPublisher.class
+com/traceusage/sdk/telemetry/TelemetryQueue.class
+com/traceusage/sdk/config/TraceUsageProperties.class
+com/traceusage/sdk/config/TraceUsageAutoConfiguration$1.class

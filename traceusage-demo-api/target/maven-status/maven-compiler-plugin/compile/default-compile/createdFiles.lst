@@ -1,12 +1,2 @@
-com\demo\traceusage\TelemetryHttpClient.class
-com\demo\traceusage\TelemetryPublisher.class
-com\demo\traceusage\TelemetryWorker.class
-com\demo\traceusage\BatchUsageEventRequest.class
-com\demo\traceusage\TraceUsageInterceptor.class
-com\demo\controller\ProductController.class
-com\demo\traceusage\TraceUsageConfig.class
-com\demo\traceusage\TelemetryQueue.class
-com\demo\traceusage\UsageEvent.class
-com\demo\TraceUsageDemoApiApplication.class
-com\demo\traceusage\TraceUsageProperties.class
-com\demo\traceusage\QueueTelemetryPublisher.class
+com/demo/TraceUsageDemoApiApplication.class
+com/demo/controller/ProductController.class

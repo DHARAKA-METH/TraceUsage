@@ -1,0 +1,55 @@
+{
+  "groups": [
+    {
+      "name": "traceusage",
+      "type": "com.traceusage.sdk.config.TraceUsageProperties",
+      "sourceType": "com.traceusage.sdk.config.TraceUsageProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "traceusage.api-key",
+      "type": "java.lang.String",
+      "sourceType": "com.traceusage.sdk.config.TraceUsageProperties"
+    },
+    {
+      "name": "traceusage.batch-size",
+      "type": "java.lang.Integer",
+      "sourceType": "com.traceusage.sdk.config.TraceUsageProperties",
+      "defaultValue": 100
+    },
+    {
+      "name": "traceusage.enabled",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.traceusage.sdk.config.TraceUsageProperties",
+      "defaultValue": true
+    },
+    {
+      "name": "traceusage.max-retries",
+      "type": "java.lang.Integer",
+      "sourceType": "com.traceusage.sdk.config.TraceUsageProperties",
+      "defaultValue": 3
+    },
+    {
+      "name": "traceusage.queue-capacity",
+      "type": "java.lang.Integer",
+      "sourceType": "com.traceusage.sdk.config.TraceUsageProperties",
+      "defaultValue": 10000
+    },
+    {
+      "name": "traceusage.retry-delay-millis",
+      "type": "java.lang.Long",
+      "sourceType": "com.traceusage.sdk.config.TraceUsageProperties",
+      "defaultValue": 1000
+    },
+    {
+      "name": "traceusage.server-url",
+      "type": "java.lang.String",
+      "sourceType": "com.traceusage.sdk.config.TraceUsageProperties"
+    }
+  ],
+  "hints": [],
+  "ignored": {
+    "properties": []
+  }
+}
