@@ -14,4 +14,6 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
     Page<Application> findAllByOwnerId(Long ownerId, Pageable pageable);
 
     Optional<Application> findByIdAndOwnerId(Long id, Long ownerId);
+
+    Optional<Application> findByProjectIdAndOwnerId(String projectId, Long ownerId);
 }
