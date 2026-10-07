@@ -70,6 +70,7 @@ public class TelemetryWorker implements SmartLifecycle {
                 int batchSize = Math.max(1, properties.getBatchSize());
                 queue.drainTo(batch, batchSize - batch.size());
 
+                log.info("TraceUsage worker sending batch with {} event(s)", batch.size());
                 sendWithBoundedRetry(batch);
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
@@ -88,8 +89,11 @@ public class TelemetryWorker implements SmartLifecycle {
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
                 httpClient.sendBatch(batch);
+                log.info("TraceUsage telemetry batch sent successfully with {} event(s)", batch.size());
                 return;
             } catch (RestClientResponseException exception) {
+                log.warn("TraceUsage telemetry HTTP failure status={} body={}",
+                        exception.getStatusCode().value(), exception.getResponseBodyAsString());
                 if (!shouldRetryStatus(exception.getStatusCode().value())) {
                     log.warn("TraceUsage telemetry batch dropped after HTTP {}", exception.getStatusCode().value());
                     return;

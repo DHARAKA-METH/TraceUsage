@@ -26,6 +26,10 @@ public class TelemetryPublisher {
         boolean accepted = queue.publish(event);
         if (!accepted) {
             log.warn("TraceUsage telemetry queue is full; dropping event {}", event.eventId());
+            return;
         }
+
+        log.info("TraceUsage queued event {} {} status={} eventId={}",
+                event.method(), event.endpoint(), event.statusCode(), event.eventId());
     }
 }

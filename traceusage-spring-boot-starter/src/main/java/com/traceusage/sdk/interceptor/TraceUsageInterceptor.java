@@ -4,6 +4,8 @@ import com.traceusage.sdk.service.TelemetryPublisher;
 import com.traceusage.sdk.telemetry.UsageEvent;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.HandlerMapping;
 
@@ -11,6 +13,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 public class TraceUsageInterceptor implements HandlerInterceptor {
+
+    private static final Logger log = LoggerFactory.getLogger(TraceUsageInterceptor.class);
 
     private final TelemetryPublisher publisher;
 
@@ -42,6 +46,9 @@ public class TraceUsageInterceptor implements HandlerInterceptor {
                     endpoint,
                     response.getStatus(),
                     Instant.now());
+
+            log.info("TraceUsage captured event {} {} status={} eventId={}",
+                    event.method(), event.endpoint(), event.statusCode(), event.eventId());
 
             publisher.publish(event);
         } catch (Exception ignored) {
