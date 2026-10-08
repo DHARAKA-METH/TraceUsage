@@ -7,8 +7,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.CrossOrigin;
 
 @RestController
+@CrossOrigin(origins = {"http://localhost:3001"})
 @RequestMapping("/api/products")
 public class ProductController {
 
@@ -18,7 +20,20 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<String> getProduct(@PathVariable Long id) {
-        return ResponseEntity.ok("Product " + id);
+    public ResponseEntity<ProductResponse> getProduct(@PathVariable Long id) {
+        return ResponseEntity.ok(new ProductResponse(
+                id,
+                "Laptop",
+                250000,
+                "Gaming Laptop",
+                "LAP-001"));
+    }
+
+    public record ProductResponse(
+            Long id,
+            String name,
+            Integer price,
+            String description,
+            String legacyCode) {
     }
 }

@@ -16,7 +16,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ProductController.class)
@@ -38,7 +38,8 @@ class ProductControllerInstrumentationTest {
     void createProduct_shouldPublishPostProductEndpointUsage() throws Exception {
         mockMvc.perform(post("/api/products"))
                 .andExpect(status().isCreated())
-                .andExpect(content().string("Product created"));
+                .andExpect(result -> org.assertj.core.api.Assertions.assertThat(result.getResponse().getContentAsString())
+                        .isEqualTo("Product created"));
 
         verify(publisher).publish(argThat(event ->
                 event.method().equals("POST")
@@ -50,11 +51,14 @@ class ProductControllerInstrumentationTest {
     void getProduct_withDifferentIds_shouldPublishNormalizedEndpointPattern() throws Exception {
         mockMvc.perform(get("/api/products/10"))
                 .andExpect(status().isOk())
-                .andExpect(content().string("Product 10"));
+                .andExpect(jsonPath("$.id").value(10))
+                .andExpect(jsonPath("$.name").value("Laptop"))
+                .andExpect(jsonPath("$.price").value(250000))
+                .andExpect(jsonPath("$.legacyCode").value("LAP-001"));
 
         mockMvc.perform(get("/api/products/20"))
                 .andExpect(status().isOk())
-                .andExpect(content().string("Product 20"));
+                .andExpect(jsonPath("$.id").value(20));
 
         verify(publisher, times(2)).publish(argThat(this::isNormalizedGetProductEvent));
     }
