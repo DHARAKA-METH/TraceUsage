@@ -1,5 +1,6 @@
 import { defaultTraceUsageClient, type TraceUsageClient } from "./TraceUsageClient.js";
 import type { TraceUsageResponseContext } from "../types/TelemetryEvent.js";
+import { discoverFields, type FieldDiscoveryOptions } from "../utils/discoverFields.js";
 import { buildFieldPath, isIgnoredProperty } from "../utils/fieldPath.js";
 
 type JsonLikeObject = Record<string, unknown> | unknown[];
@@ -8,6 +9,7 @@ const proxyCache = new WeakMap<object, Map<string, unknown>>();
 
 export type TrackResponseOptions = {
   client?: TraceUsageClient;
+  discovery?: FieldDiscoveryOptions;
 };
 
 export function trackResponse<T>(
@@ -16,6 +18,20 @@ export function trackResponse<T>(
   options: TrackResponseOptions = {},
 ): T {
   const client = options.client ?? defaultTraceUsageClient;
+
+  const discoveryResult = discoverFields(data, {
+    ...client.getDiscoveryOptions(),
+    ...options.discovery,
+  });
+
+  client.recordObservedFields({
+    ...context,
+    fieldPaths: discoveryResult.fieldPaths,
+    observedAt: new Date(),
+    truncated: discoveryResult.truncated,
+    skipped: discoveryResult.skipped,
+    reason: discoveryResult.reason,
+  });
 
   if (!isTrackableObject(data)) {
     return data;
