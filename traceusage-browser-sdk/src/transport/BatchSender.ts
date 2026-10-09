@@ -99,16 +99,22 @@ export class BatchSender {
     const timeout = setTimeout(() => controller.abort(), this.options.timeoutMs);
 
     try {
+      const payload = this.createPayload(responses, batchId);
+
+      console.log("[TraceUsage] Sending field usage batch", JSON.stringify(payload));
+
       const response = await fetch(this.url(), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "X-TraceUsage-Public-Key": this.options.publicKey,
         },
-        body: JSON.stringify(this.createPayload(responses, batchId)),
+        body: JSON.stringify(payload),
         keepalive,
         signal: controller.signal,
       });
+
+      console.log(`[TraceUsage] Field usage batch response status=${response.status}`);
 
       if (response.ok) {
         return { ok: true, status: response.status, retryable: false };
@@ -119,7 +125,8 @@ export class BatchSender {
         status: response.status,
         retryable: response.status === 429 || response.status === 503 || response.status >= 500,
       };
-    } catch {
+    } catch (error) {
+      console.log("[TraceUsage] Field usage batch request failed", error);
       return { ok: false, retryable: true };
     } finally {
       clearTimeout(timeout);

@@ -40,25 +40,35 @@ public class FieldUsageService {
     @Transactional
     public void collectBatch(String publicIngestKey, FieldUsageBatchRequest request) {
         Application application = authenticationService.authenticate(publicIngestKey);
+        System.out.println("AUTHENTICATED -> applicationId=" + application.getId()
+                + " projectId=" + application.getProjectId());
 
         if (processedBatchRepository.existsByBatchId(request.batchId())) {
+            System.out.println("BATCH ALREADY PROCESSED -> skipping batchId=" + request.batchId());
             return;
         }
 
         try {
             processedBatchRepository.save(ProcessedFieldUsageBatch.create(request.batchId(), application));
-            saveObservedFields(application, request);
-            saveFieldUsageEvents(application, request);
+            System.out.println("SAVED -> processed_field_usage_batches batchId=" + request.batchId());
+
+            int observedCount = saveObservedFields(application, request);
+            System.out.println("SAVED -> observed_fields rows=" + observedCount);
+
+            int usageCount = saveFieldUsageEvents(application, request);
+            System.out.println("SAVED -> field_usage_events rows=" + usageCount);
         } catch (DataIntegrityViolationException exception) {
             if (processedBatchRepository.existsByBatchId(request.batchId())) {
+                System.out.println("BATCH ALREADY PROCESSED -> skipping duplicate batchId=" + request.batchId());
                 return;
             }
             throw exception;
         }
     }
 
-    private void saveObservedFields(Application application, FieldUsageBatchRequest request) {
+    private int saveObservedFields(Application application, FieldUsageBatchRequest request) {
         Instant seenAt = request.observedAt();
+        int saved = 0;
         for (ObservedFieldsRequest response : request.responses()) {
             String httpMethod = normalizeMethod(response.method());
             String endpoint = response.endpoint().trim();
@@ -68,20 +78,25 @@ public class FieldUsageService {
                 continue;
             }
 
-            response.observedFields().stream()
+            for (String rawFieldPath : response.observedFields().stream()
                     .map(String::trim)
                     .distinct()
-                    .forEach(fieldPath -> observedFieldRepository.upsertObservedField(
-                            application.getId(),
-                            httpMethod,
-                            endpoint,
-                            schemaName,
-                            fieldPath,
-                            seenAt));
+                    .toList()) {
+                observedFieldRepository.upsertObservedField(
+                        application.getId(),
+                        httpMethod,
+                        endpoint,
+                        schemaName,
+                        rawFieldPath,
+                        seenAt);
+                saved++;
+                System.out.println("OBSERVED_FIELD -> " + httpMethod + " " + endpoint + " " + rawFieldPath);
+            }
         }
+        return saved;
     }
 
-    private void saveFieldUsageEvents(Application application, FieldUsageBatchRequest request) {
+    private int saveFieldUsageEvents(Application application, FieldUsageBatchRequest request) {
         List<FieldUsageEvent> events = new ArrayList<>();
 
         for (ObservedFieldsRequest response : request.responses()) {
@@ -105,6 +120,14 @@ public class FieldUsageService {
         }
 
         fieldUsageRepository.saveAll(events);
+
+        events.forEach(event -> System.out.println("FIELD_USAGE_EVENT -> "
+                + event.getHttpMethod() + " " + event.getEndpoint()
+                + " field=" + event.getFieldPath()
+                + " client=" + event.getClientId()
+                + " count=" + event.getAccessCount()));
+
+        return events.size();
     }
 
     private String normalizeMethod(String method) {
