@@ -23,6 +23,8 @@ import java.util.Objects;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Application {
 
+    private static final int DEFAULT_INACTIVITY_THRESHOLD_DAYS = 90;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -43,6 +45,12 @@ public class Application {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    @Column(name = "monitoring_started_at")
+    private Instant monitoringStartedAt;
+
+    @Column(name = "inactivity_threshold_days", nullable = false)
+    private Integer inactivityThresholdDays;
+
     public static Application create(String projectId, String name,
                                      String environment, User owner) {
         Application application = new Application();
@@ -51,6 +59,15 @@ public class Application {
         application.environment = Objects.requireNonNull(environment);
         application.owner = Objects.requireNonNull(owner);
         application.createdAt = Instant.now();
+        application.inactivityThresholdDays = DEFAULT_INACTIVITY_THRESHOLD_DAYS;
         return application;
+    }
+
+    public void updateInactivityThresholdDays(Integer inactivityThresholdDays) {
+        this.inactivityThresholdDays = Objects.requireNonNull(inactivityThresholdDays);
+    }
+
+    public void updateMonitoringStartedAt(Instant monitoringStartedAt) {
+        this.monitoringStartedAt = monitoringStartedAt;
     }
 }

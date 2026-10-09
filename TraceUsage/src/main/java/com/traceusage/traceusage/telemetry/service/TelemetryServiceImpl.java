@@ -2,6 +2,7 @@ package com.traceusage.traceusage.telemetry.service;
 
 import com.traceusage.traceusage.apikey.service.ApiKeyAuthenticationService;
 import com.traceusage.traceusage.application.entity.Application;
+import com.traceusage.traceusage.lifecycle.service.EndpointRegistryService;
 import com.traceusage.traceusage.telemetry.dto.BatchUsageEventRequest;
 import com.traceusage.traceusage.telemetry.dto.UsageEventRequest;
 import com.traceusage.traceusage.telemetry.entity.UsageEvent;
@@ -24,11 +25,14 @@ public class TelemetryServiceImpl implements TelemetryService {
 
     private final ApiKeyAuthenticationService apiKeyAuthenticationService;
     private final UsageEventRepository usageEventRepository;
+    private final EndpointRegistryService endpointRegistry;
 
     public TelemetryServiceImpl(ApiKeyAuthenticationService apiKeyAuthenticationService,
-                                UsageEventRepository usageEventRepository) {
+                                UsageEventRepository usageEventRepository,
+                                EndpointRegistryService endpointRegistry) {
         this.apiKeyAuthenticationService = apiKeyAuthenticationService;
         this.usageEventRepository = usageEventRepository;
+        this.endpointRegistry = endpointRegistry;
     }
 
     @Override
@@ -43,7 +47,8 @@ public class TelemetryServiceImpl implements TelemetryService {
         UsageEvent usageEvent = toEntity(application, request);
 
         try {
-            usageEventRepository.save(usageEvent);
+            UsageEvent saved = usageEventRepository.save(usageEvent);
+            endpointRegistry.recordUsage(application, saved);
         } catch (DataIntegrityViolationException exception) {
             if (usageEventRepository.existsByEventId(request.eventId())) {
                 return;
@@ -75,7 +80,8 @@ public class TelemetryServiceImpl implements TelemetryService {
             }
 
             try {
-                usageEventRepository.save(toEntity(application, event));
+                UsageEvent saved = usageEventRepository.save(toEntity(application, event));
+                endpointRegistry.recordUsage(application, saved);
                 savedInThisBatch.add(event.eventId());
             } catch (DataIntegrityViolationException exception) {
                 if (!usageEventRepository.existsByEventId(event.eventId())) {

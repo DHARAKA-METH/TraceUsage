@@ -3,6 +3,7 @@ package com.traceusage.traceusage.telemetry.service;
 import com.traceusage.traceusage.apikey.exception.InvalidApiKeyException;
 import com.traceusage.traceusage.apikey.service.ApiKeyAuthenticationService;
 import com.traceusage.traceusage.application.entity.Application;
+import com.traceusage.traceusage.lifecycle.service.EndpointRegistryService;
 import com.traceusage.traceusage.telemetry.dto.BatchUsageEventRequest;
 import com.traceusage.traceusage.telemetry.dto.UsageEventRequest;
 import com.traceusage.traceusage.telemetry.entity.UsageEvent;
@@ -37,6 +38,9 @@ class TelemetryServiceImplTest {
 
     @Mock
     private UsageEventRepository usageEventRepository;
+
+    @Mock
+    private EndpointRegistryService endpointRegistry;
 
     @InjectMocks
     private TelemetryServiceImpl telemetryService;
