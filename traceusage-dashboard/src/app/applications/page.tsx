@@ -64,9 +64,12 @@ export default function ApplicationsPage() {
                     <td>{application.environment}</td>
                     <td><code>{application.projectId}</code></td>
                     <td>{new Date(application.createdAt).toLocaleDateString()}</td>
-                    <td>
+                    <td style={{ display: "flex", gap: 8 }}>
                       <Link className="button secondary" href={`/applications/${application.projectId}/analytics`}>
-                        View analytics
+                        Endpoints
+                      </Link>
+                      <Link className="button secondary" href={`/applications/${application.projectId}/fields`}>
+                        Fields
                       </Link>
                     </td>
                   </tr>

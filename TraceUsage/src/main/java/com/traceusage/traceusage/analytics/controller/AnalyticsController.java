@@ -1,6 +1,7 @@
 package com.traceusage.traceusage.analytics.controller;
 
 import com.traceusage.traceusage.analytics.dto.EndpointAnalyticsResponse;
+import com.traceusage.traceusage.analytics.dto.FieldAnalyticsResponse;
 import com.traceusage.traceusage.analytics.service.AnalyticsService;
 import com.traceusage.traceusage.auth.security.AuthenticatedUser;
 import com.traceusage.traceusage.shared.response.ApiResponse;
@@ -41,5 +42,30 @@ public class AnalyticsController {
                 to);
 
         return ApiResponse.success("Endpoint analytics retrieved successfully", response);
+    }
+
+    @GetMapping("/fields")
+    public ApiResponse<FieldAnalyticsResponse> getFieldAnalytics(
+            @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @PathVariable String projectId,
+            @RequestParam(required = false) String endpoint,
+            @RequestParam(required = false) String clientId,
+            @RequestParam(required = false) String clientVersion,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            Instant from,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            Instant to) {
+        FieldAnalyticsResponse response = analyticsService.getFieldAnalytics(
+                currentUser.id(),
+                projectId,
+                endpoint,
+                clientId,
+                clientVersion,
+                from,
+                to);
+
+        return ApiResponse.success("Field analytics retrieved successfully", response);
     }
 }
