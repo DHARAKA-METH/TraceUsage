@@ -8,4 +8,5 @@ export type Application = {
 
 export type CreateApplicationResponse = Application & {
   apiKey: string;
+  publicIngestKey?: string | null;
 };

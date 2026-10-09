@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.3",
+    "@traceusage/browser": "file:../traceusage-browser-sdk",
     "next": "^16.4.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",

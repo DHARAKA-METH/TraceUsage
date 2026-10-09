@@ -1,6 +1,7 @@
 "use client";
 
 import type { Product } from "@/types/product";
+import { getTraceUsageClient } from "@/lib/traceUsage";
 import { useEffect, useState } from "react";
 
 const API_URL = process.env.NEXT_PUBLIC_DEMO_API_URL ?? "http://localhost:8081";
@@ -19,7 +20,14 @@ export default function HomePage() {
         }
 
         const data = (await response.json()) as Product;
-        setProduct(data);
+
+        const trackedProduct = getTraceUsageClient().trackResponse(data, {
+          method: "GET",
+          endpoint: "/api/products/{id}",
+          schema: "Product",
+        });
+
+        setProduct(trackedProduct);
       } catch (exception) {
         setError(exception instanceof Error ? exception.message : "Failed to load product");
       } finally {
