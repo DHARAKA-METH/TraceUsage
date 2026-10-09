@@ -63,7 +63,15 @@ public class ApplicationServiceImpl implements ApplicationService {
                 apiKeyHashService.hash(rawApiKey));
         apiKeyRepository.save(apiKey);
 
-        return CreateApplicationResponse.from(savedApplication, rawApiKey);
+        String rawPublicIngestKey = credentialGenerator.generatePublicIngestKey();
+        ApiKey publicIngestKey = ApiKey.create(
+                savedApplication,
+                credentialGenerator.extractPrefix(rawPublicIngestKey),
+                apiKeyHashService.hash(rawPublicIngestKey),
+                "PUBLIC_BROWSER");
+        apiKeyRepository.save(publicIngestKey);
+
+        return CreateApplicationResponse.from(savedApplication, rawApiKey, rawPublicIngestKey);
     }
 
     @Override

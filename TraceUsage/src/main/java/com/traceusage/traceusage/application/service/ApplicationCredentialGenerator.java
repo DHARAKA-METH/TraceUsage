@@ -23,6 +23,10 @@ public class ApplicationCredentialGenerator {
         return "tru_sk_" + randomValue(API_KEY_BYTES);
     }
 
+    public String generatePublicIngestKey() {
+        return "tru_pk_" + randomValue(API_KEY_BYTES);
+    }
+
     public String extractPrefix(String rawApiKey) {
         return rawApiKey.substring(0, Math.min(rawApiKey.length(), KEY_PREFIX_LENGTH));
     }

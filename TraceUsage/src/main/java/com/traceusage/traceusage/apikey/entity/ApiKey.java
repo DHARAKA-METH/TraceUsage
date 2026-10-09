@@ -37,6 +37,9 @@ public class ApiKey {
     @Column(name = "key_hash", nullable = false, unique = true, length = 255)
     private String keyHash;
 
+    @Column(name = "key_type", nullable = false, length = 30)
+    private String keyType;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -48,7 +51,14 @@ public class ApiKey {
         apiKey.application = Objects.requireNonNull(application);
         apiKey.keyPrefix = Objects.requireNonNull(keyPrefix);
         apiKey.keyHash = Objects.requireNonNull(keyHash);
+        apiKey.keyType = "SECRET";
         apiKey.createdAt = Instant.now();
+        return apiKey;
+    }
+
+    public static ApiKey create(Application application, String keyPrefix, String keyHash, String keyType) {
+        ApiKey apiKey = create(application, keyPrefix, keyHash);
+        apiKey.keyType = Objects.requireNonNull(keyType);
         return apiKey;
     }
 }

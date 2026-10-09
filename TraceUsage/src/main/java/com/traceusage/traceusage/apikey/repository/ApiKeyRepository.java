@@ -10,4 +10,7 @@ public interface ApiKeyRepository extends JpaRepository<ApiKey, Long> {
 
     @EntityGraph(attributePaths = "application")
     Optional<ApiKey> findByKeyHashAndRevokedAtIsNull(String keyHash);
+
+    @EntityGraph(attributePaths = "application")
+    Optional<ApiKey> findByKeyHashAndKeyTypeAndRevokedAtIsNull(String keyHash, String keyType);
 }

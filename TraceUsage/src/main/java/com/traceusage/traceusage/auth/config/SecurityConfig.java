@@ -43,7 +43,8 @@ public class SecurityConfig {
                                 "/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/events",
-                                "/api/v1/events/batch").permitAll()
+                                "/api/v1/events/batch",
+                                "/api/v1/field-events/batch").permitAll()
                         .requestMatchers("/api/applications/**").authenticated()
                         .anyRequest().authenticated())
                 .exceptionHandling(errors -> errors

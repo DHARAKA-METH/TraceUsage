@@ -57,9 +57,13 @@ class ApplicationServiceImplTest {
         when(applicationRepository.save(any(Application.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(credentialGenerator.generateApiKey()).thenReturn("tru_sk_raw-secret-value");
+        when(credentialGenerator.generatePublicIngestKey()).thenReturn("tru_pk_raw-public-value");
         when(credentialGenerator.extractPrefix("tru_sk_raw-secret-value"))
                 .thenReturn("tru_sk_raw-secret");
+        when(credentialGenerator.extractPrefix("tru_pk_raw-public-value"))
+                .thenReturn("tru_pk_raw-public");
         when(apiKeyHashService.hash("tru_sk_raw-secret-value")).thenReturn("stored-hash");
+        when(apiKeyHashService.hash("tru_pk_raw-public-value")).thenReturn("stored-public-hash");
 
         var response = applicationService.create(
                 7L, new CreateApplicationRequest(" Product Service ", "DEVELOPMENT"));
@@ -71,10 +75,15 @@ class ApplicationServiceImplTest {
         assertThat(applicationCaptor.getValue().getOwner()).isSameAs(owner);
 
         ArgumentCaptor<ApiKey> apiKeyCaptor = ArgumentCaptor.forClass(ApiKey.class);
-        verify(apiKeyRepository).save(apiKeyCaptor.capture());
-        assertThat(apiKeyCaptor.getValue().getKeyHash()).isEqualTo("stored-hash");
-        assertThat(apiKeyCaptor.getValue().getKeyPrefix()).isEqualTo("tru_sk_raw-secret");
+        verify(apiKeyRepository, org.mockito.Mockito.times(2)).save(apiKeyCaptor.capture());
+        assertThat(apiKeyCaptor.getAllValues())
+                .extracting(ApiKey::getKeyHash)
+                .containsExactly("stored-hash", "stored-public-hash");
+        assertThat(apiKeyCaptor.getAllValues())
+                .extracting(ApiKey::getKeyPrefix)
+                .containsExactly("tru_sk_raw-secret", "tru_pk_raw-public");
         assertThat(response.apiKey()).isEqualTo("tru_sk_raw-secret-value");
+        assertThat(response.publicIngestKey()).isEqualTo("tru_pk_raw-public-value");
         assertThat(response.projectId()).isEqualTo("proj_test123456789");
     }
 

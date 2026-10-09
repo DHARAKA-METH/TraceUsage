@@ -61,6 +61,7 @@ class ApplicationControllerTest {
                 "development",
                 "proj_test",
                 "tru_sk_raw-key",
+                "tru_pk_raw-key",
                 Instant.parse("2026-10-01T10:00:00Z")));
 
         mockMvc.perform(post("/api/applications")
@@ -75,7 +76,8 @@ class ApplicationControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.projectId").value("proj_test"))
-                .andExpect(jsonPath("$.data.apiKey").value("tru_sk_raw-key"));
+                .andExpect(jsonPath("$.data.apiKey").value("tru_sk_raw-key"))
+                .andExpect(jsonPath("$.data.publicIngestKey").value("tru_pk_raw-key"));
     }
 
     @Test
