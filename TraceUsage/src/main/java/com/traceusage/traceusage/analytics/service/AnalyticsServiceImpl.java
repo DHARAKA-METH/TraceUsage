@@ -4,6 +4,8 @@ import com.traceusage.traceusage.analytics.dto.EndpointAnalyticsItem;
 import com.traceusage.traceusage.analytics.dto.EndpointAnalyticsResponse;
 import com.traceusage.traceusage.analytics.dto.FieldAnalyticsItem;
 import com.traceusage.traceusage.analytics.dto.FieldAnalyticsResponse;
+import com.traceusage.traceusage.analytics.dto.SchemaFieldAnalyticsItem;
+import com.traceusage.traceusage.analytics.dto.SchemaFieldAnalyticsResponse;
 import com.traceusage.traceusage.application.entity.Application;
 import com.traceusage.traceusage.application.exception.ApplicationNotFoundException;
 import com.traceusage.traceusage.application.repository.ApplicationRepository;
@@ -81,6 +83,32 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 effectiveTo);
 
         return new FieldAnalyticsResponse(
+                application.getProjectId(),
+                application.getName(),
+                application.getEnvironment(),
+                fields);
+    }
+
+    @Override
+    public SchemaFieldAnalyticsResponse getSchemaFieldAnalytics(Long ownerId,
+                                                               String projectId,
+                                                               String endpoint,
+                                                               Instant from,
+                                                               Instant to) {
+        Instant effectiveFrom = from == null ? Instant.EPOCH : from;
+        Instant effectiveTo = to == null ? Instant.now() : to;
+
+        Application application = applicationRepository
+                .findByProjectIdAndOwnerId(projectId, ownerId)
+                .orElseThrow(ApplicationNotFoundException::new);
+
+        List<SchemaFieldAnalyticsItem> fields = querySchemaFieldAnalytics(
+                application.getId(),
+                normalizeBlank(endpoint),
+                effectiveFrom,
+                effectiveTo);
+
+        return new SchemaFieldAnalyticsResponse(
                 application.getProjectId(),
                 application.getName(),
                 application.getEnvironment(),
@@ -173,6 +201,103 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                     lastAccessed == null ? null : lastAccessed.toInstant(),
                     totalAccesses > 0 ? "ACCESS_OBSERVED" : "NO_ACCESS_OBSERVED");
         }, params.toArray());
+    }
+
+    private List<SchemaFieldAnalyticsItem> querySchemaFieldAnalytics(Long applicationId,
+                                                                    String endpoint,
+                                                                    Instant from,
+                                                                    Instant to) {
+        StringBuilder sql = new StringBuilder("""
+                with latest_spec as (
+                    select id
+                    from openapi_specs
+                    where application_id = ?
+                    order by imported_at desc, id desc
+                    limit 1
+                ), runtime_usage as (
+                    select
+                        application_id,
+                        http_method,
+                        endpoint,
+                        field_path,
+                        sum(access_count) as total_accesses,
+                        max(observed_at) as last_accessed
+                    from field_usage_events
+                    where application_id = ?
+                      and observed_at >= ?
+                      and observed_at <= ?
+                    group by application_id, http_method, endpoint, field_path
+                )
+                select
+                    oe.http_method,
+                    oe.endpoint_path,
+                    f.response_status,
+                    f.content_type,
+                    f.schema_name,
+                    f.field_path,
+                    f.field_type,
+                    f.required,
+                    f.nullable,
+                    f.deprecated,
+                    coalesce(r.total_accesses, 0) as total_accesses,
+                    r.last_accessed
+                from openapi_response_fields f
+                join openapi_endpoints oe on oe.id = f.openapi_endpoint_id
+                join latest_spec ls on ls.id = f.spec_id
+                left join runtime_usage r
+                  on r.application_id = f.application_id
+                 and r.http_method = oe.http_method
+                 and r.endpoint = oe.endpoint_path
+                 and r.field_path = f.field_path
+                where f.application_id = ?
+                """);
+
+        List<Object> params = new ArrayList<>();
+        params.add(applicationId);
+        params.add(applicationId);
+        params.add(Timestamp.from(from));
+        params.add(Timestamp.from(to));
+        params.add(applicationId);
+
+        if (endpoint != null) {
+            sql.append(" and oe.endpoint_path = ?\n");
+            params.add(endpoint);
+        }
+
+        sql.append("""
+                order by oe.endpoint_path, oe.http_method, f.field_path
+                """);
+
+        return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> {
+            long totalAccesses = rs.getLong("total_accesses");
+            boolean deprecated = rs.getBoolean("deprecated");
+            Timestamp lastAccessed = rs.getTimestamp("last_accessed");
+
+            return new SchemaFieldAnalyticsItem(
+                    rs.getString("http_method"),
+                    rs.getString("endpoint_path"),
+                    rs.getString("response_status"),
+                    rs.getString("content_type"),
+                    rs.getString("schema_name"),
+                    rs.getString("field_path"),
+                    rs.getString("field_type"),
+                    rs.getBoolean("required"),
+                    rs.getBoolean("nullable"),
+                    deprecated,
+                    totalAccesses,
+                    lastAccessed == null ? null : lastAccessed.toInstant(),
+                    schemaFieldStatus(totalAccesses, deprecated));
+        }, params.toArray());
+    }
+
+    private String schemaFieldStatus(long totalAccesses, boolean deprecated) {
+        if (totalAccesses > 0) {
+            return "ACCESS_OBSERVED";
+        }
+
+        return deprecated
+                ? "DEPRECATED_NO_ACCESS_OBSERVED"
+                : "NO_ACCESS_OBSERVED";
     }
 
     private String normalizeBlank(String value) {

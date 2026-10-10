@@ -34,3 +34,26 @@ export type FieldAnalyticsResponse = {
   environment: string;
   fields: FieldAnalyticsItem[];
 };
+
+export type SchemaFieldAnalyticsItem = {
+  method: string;
+  endpoint: string;
+  responseStatus: string;
+  contentType: string;
+  schemaName: string | null;
+  fieldPath: string;
+  fieldType: string | null;
+  required: boolean;
+  nullable: boolean;
+  deprecated: boolean;
+  totalAccesses: number;
+  lastAccessed: string | null;
+  status: "ACCESS_OBSERVED" | "NO_ACCESS_OBSERVED" | "DEPRECATED_NO_ACCESS_OBSERVED" | string;
+};
+
+export type SchemaFieldAnalyticsResponse = {
+  projectId: string;
+  applicationName: string;
+  environment: string;
+  fields: SchemaFieldAnalyticsItem[];
+};

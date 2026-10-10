@@ -71,6 +71,9 @@ export default function ApplicationsPage() {
                       <Link className="button secondary" href={`/applications/${application.projectId}/fields`}>
                         Fields
                       </Link>
+                      <Link className="button secondary" href={`/applications/${application.projectId}/openapi`}>
+                        OpenAPI
+                      </Link>
                       <Link className="button secondary" href={`/applications/${application.projectId}/lifecycle`}>
                         Lifecycle
                       </Link>

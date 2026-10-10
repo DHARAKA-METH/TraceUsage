@@ -2,6 +2,7 @@ package com.traceusage.traceusage.analytics.controller;
 
 import com.traceusage.traceusage.analytics.dto.EndpointAnalyticsResponse;
 import com.traceusage.traceusage.analytics.dto.FieldAnalyticsResponse;
+import com.traceusage.traceusage.analytics.dto.SchemaFieldAnalyticsResponse;
 import com.traceusage.traceusage.analytics.service.AnalyticsService;
 import com.traceusage.traceusage.auth.security.AuthenticatedUser;
 import com.traceusage.traceusage.shared.response.ApiResponse;
@@ -67,5 +68,26 @@ public class AnalyticsController {
                 to);
 
         return ApiResponse.success("Field analytics retrieved successfully", response);
+    }
+
+    @GetMapping("/schema-fields")
+    public ApiResponse<SchemaFieldAnalyticsResponse> getSchemaFieldAnalytics(
+            @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @PathVariable String projectId,
+            @RequestParam(required = false) String endpoint,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            Instant from,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            Instant to) {
+        SchemaFieldAnalyticsResponse response = analyticsService.getSchemaFieldAnalytics(
+                currentUser.id(),
+                projectId,
+                endpoint,
+                from,
+                to);
+
+        return ApiResponse.success("Schema field analytics retrieved successfully", response);
     }
 }

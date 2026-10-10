@@ -9,11 +9,12 @@ type ApiFetchOptions = RequestInit & {
 export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
   const { auth = true, headers, ...requestOptions } = options;
   const token = auth ? getToken() : null;
+  const isFormData = requestOptions.body instanceof FormData;
 
   const response = await fetch(`${API_URL}${path}`, {
     ...requestOptions,
     headers: {
-      "Content-Type": "application/json",
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },

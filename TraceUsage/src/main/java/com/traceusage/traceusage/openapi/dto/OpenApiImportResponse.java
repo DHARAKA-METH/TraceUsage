@@ -7,5 +7,9 @@ public record OpenApiImportResponse(
         String contentType,
         long sizeBytes,
         Instant importedAt,
+        long endpointsDiscovered,
+        long fieldsDiscovered,
+        long deprecatedEndpoints,
+        long deprecatedFields,
         String status) {
 }
