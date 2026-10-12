@@ -1,5 +1,6 @@
 package com.traceusage.traceusage.telemetry.controller;
 
+import com.traceusage.traceusage.messaging.config.IngestionProperties;
 import com.traceusage.traceusage.shared.response.ApiResponse;
 import com.traceusage.traceusage.telemetry.dto.BatchUsageEventRequest;
 import com.traceusage.traceusage.telemetry.dto.UsageEventRequest;
@@ -20,9 +21,12 @@ public class TelemetryController {
     private static final String API_KEY_HEADER = "X-TraceUsage-Key";
 
     private final TelemetryService telemetryService;
+    private final IngestionProperties ingestionProperties;
 
-    public TelemetryController(TelemetryService telemetryService) {
+    public TelemetryController(TelemetryService telemetryService,
+                               IngestionProperties ingestionProperties) {
         this.telemetryService = telemetryService;
+        this.ingestionProperties = ingestionProperties;
     }
 
     @PostMapping
@@ -30,6 +34,10 @@ public class TelemetryController {
             @RequestHeader(name = API_KEY_HEADER, required = false) String apiKey,
             @Valid @RequestBody UsageEventRequest request) {
         telemetryService.collect(apiKey, request);
+        if (ingestionProperties.isKafkaMode()) {
+            return ResponseEntity.status(HttpStatus.ACCEPTED)
+                    .body(ApiResponse.success("Event accepted for asynchronous processing", null));
+        }
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Event collected successfully", null));
     }
@@ -39,6 +47,10 @@ public class TelemetryController {
             @RequestHeader(name = API_KEY_HEADER, required = false) String apiKey,
             @Valid @RequestBody BatchUsageEventRequest request) {
         telemetryService.collectBatch(apiKey, request);
+        if (ingestionProperties.isKafkaMode()) {
+            return ResponseEntity.status(HttpStatus.ACCEPTED)
+                    .body(ApiResponse.success("Events accepted for asynchronous processing", null));
+        }
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Events collected successfully", null));
     }

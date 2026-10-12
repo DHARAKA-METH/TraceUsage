@@ -2,6 +2,7 @@ package com.traceusage.traceusage.fieldusage.controller;
 
 import com.traceusage.traceusage.fieldusage.dto.FieldUsageBatchRequest;
 import com.traceusage.traceusage.fieldusage.service.FieldUsageService;
+import com.traceusage.traceusage.messaging.config.IngestionProperties;
 import com.traceusage.traceusage.shared.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -20,9 +21,12 @@ public class FieldUsageController {
     private static final String PUBLIC_KEY_HEADER = "X-TraceUsage-Public-Key";
 
     private final FieldUsageService fieldUsageService;
+    private final IngestionProperties ingestionProperties;
 
-    public FieldUsageController(FieldUsageService fieldUsageService) {
+    public FieldUsageController(FieldUsageService fieldUsageService,
+                                IngestionProperties ingestionProperties) {
         this.fieldUsageService = fieldUsageService;
+        this.ingestionProperties = ingestionProperties;
     }
 
     @PostMapping("/batch")
@@ -32,7 +36,14 @@ public class FieldUsageController {
             HttpServletRequest httpRequest) {
         printRequest(publicIngestKey, request, httpRequest);
         fieldUsageService.collectBatch(publicIngestKey, request);
-        System.out.println("FIELD USAGE BATCH SAVED TO DATABASE");
+
+        if (ingestionProperties.isKafkaMode()) {
+            System.out.println("FIELD USAGE BATCH ACCEPTED BY KAFKA PIPELINE");
+            return ResponseEntity.status(HttpStatus.ACCEPTED)
+                    .body(ApiResponse.success("Field usage batch accepted for asynchronous processing", null));
+        }
+
+        System.out.println("FIELD USAGE BATCH SAVED TO DATABASE VIA DIRECT MODE");
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Field usage batch collected successfully", null));
     }

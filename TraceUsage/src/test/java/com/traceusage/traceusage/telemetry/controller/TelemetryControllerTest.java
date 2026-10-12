@@ -3,6 +3,7 @@ package com.traceusage.traceusage.telemetry.controller;
 import com.traceusage.traceusage.apikey.exception.InvalidApiKeyException;
 import com.traceusage.traceusage.auth.config.SecurityConfig;
 import com.traceusage.traceusage.auth.security.JwtService;
+import com.traceusage.traceusage.messaging.config.IngestionProperties;
 import com.traceusage.traceusage.telemetry.service.TelemetryService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +41,9 @@ class TelemetryControllerTest {
 
     @MockitoBean
     private UserDetailsService userDetailsService;
+
+    @MockitoBean
+    private IngestionProperties ingestionProperties;
 
     @Test
     void collectSingleEvent_withValidApiKeyAndNoJwt_shouldReturnCreated() throws Exception {
