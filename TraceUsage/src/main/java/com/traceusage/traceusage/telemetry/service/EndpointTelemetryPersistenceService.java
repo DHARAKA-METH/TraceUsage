@@ -3,6 +3,9 @@ package com.traceusage.traceusage.telemetry.service;
 import com.traceusage.traceusage.application.entity.Application;
 import com.traceusage.traceusage.application.exception.ApplicationNotFoundException;
 import com.traceusage.traceusage.application.repository.ApplicationRepository;
+import com.traceusage.traceusage.aggregation.EndpointUsageAggregationService;
+import com.traceusage.traceusage.aggregation.EndpointUsageAggregationService.PendingEndpointEvent;
+import com.traceusage.traceusage.lifecycle.entity.ApiEndpoint;
 import com.traceusage.traceusage.lifecycle.service.EndpointRegistryService;
 import com.traceusage.traceusage.messaging.dto.EndpointTelemetryMessage;
 import com.traceusage.traceusage.telemetry.dto.UsageEventRequest;
@@ -12,6 +15,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -27,13 +31,16 @@ public class EndpointTelemetryPersistenceService {
     private final UsageEventRepository usageEventRepository;
     private final EndpointRegistryService endpointRegistry;
     private final ApplicationRepository applicationRepository;
+    private final EndpointUsageAggregationService aggregationService;
 
     public EndpointTelemetryPersistenceService(UsageEventRepository usageEventRepository,
                                                EndpointRegistryService endpointRegistry,
-                                               ApplicationRepository applicationRepository) {
+                                               ApplicationRepository applicationRepository,
+                                               EndpointUsageAggregationService aggregationService) {
         this.usageEventRepository = usageEventRepository;
         this.endpointRegistry = endpointRegistry;
         this.applicationRepository = applicationRepository;
+        this.aggregationService = aggregationService;
     }
 
     @Transactional
@@ -59,14 +66,29 @@ public class EndpointTelemetryPersistenceService {
                 : usageEventRepository.findExistingEventIds(requestEventIds);
 
         Set<UUID> savedInThisBatch = new HashSet<>();
+        List<PendingEndpointEvent> newlyAggregated = new ArrayList<>();
         for (UsageEventRequest event : uniqueRequestEvents) {
             if (existingEventIds.contains(event.eventId()) || savedInThisBatch.contains(event.eventId())) {
                 continue;
             }
 
-            saveEntityIfNew(toEntity(application, event));
             savedInThisBatch.add(event.eventId());
+
+            UsageEvent saved;
+            try {
+                saved = usageEventRepository.save(toEntity(application, event));
+            } catch (DataIntegrityViolationException exception) {
+                if (!usageEventRepository.existsByEventId(event.eventId())) {
+                    throw exception;
+                }
+                continue;
+            }
+
+            newlyAggregated.add(new PendingEndpointEvent(
+                    endpointRegistry.recordUsage(application, saved), saved));
         }
+
+        aggregationService.aggregateAllIfNew(newlyAggregated);
     }
 
     @Transactional
@@ -91,7 +113,8 @@ public class EndpointTelemetryPersistenceService {
     private void saveEntityIfNew(UsageEvent usageEvent) {
         try {
             UsageEvent saved = usageEventRepository.save(usageEvent);
-            endpointRegistry.recordUsage(usageEvent.getApplication(), saved);
+            ApiEndpoint endpoint = endpointRegistry.recordUsage(usageEvent.getApplication(), saved);
+            aggregationService.aggregateIfNew(endpoint, saved);
         } catch (DataIntegrityViolationException exception) {
             if (!usageEventRepository.existsByEventId(usageEvent.getEventId())) {
                 throw exception;

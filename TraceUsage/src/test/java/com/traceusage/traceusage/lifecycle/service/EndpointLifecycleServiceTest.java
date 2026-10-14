@@ -1,7 +1,6 @@
 package com.traceusage.traceusage.lifecycle.service;
 
 import com.traceusage.traceusage.application.entity.Application;
-import com.traceusage.traceusage.fieldusage.repository.FieldUsageRepository;
 import com.traceusage.traceusage.lifecycle.entity.ApiEndpoint;
 import com.traceusage.traceusage.lifecycle.entity.EndpointDeprecation;
 import com.traceusage.traceusage.lifecycle.evaluator.LifecycleStatusEvaluator;
@@ -12,10 +11,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,7 +34,7 @@ class EndpointLifecycleServiceTest {
     private EndpointDeprecationRepository deprecationRepository;
 
     @Mock
-    private FieldUsageRepository fieldUsageRepository;
+    private JdbcTemplate jdbcTemplate;
 
     @Mock
     private Application application;
@@ -48,7 +47,7 @@ class EndpointLifecycleServiceTest {
                 endpointRepository,
                 deprecationRepository,
                 new LifecycleStatusEvaluator(),
-                new KnownClientAnalyzer(fieldUsageRepository));
+                new KnownClientAnalyzer(jdbcTemplate));
 
         when(application.getId()).thenReturn(APPLICATION_ID);
         when(application.getInactivityThresholdDays()).thenReturn(90);
@@ -125,7 +124,7 @@ class EndpointLifecycleServiceTest {
                 .thenReturn(Optional.of(endpoint));
         when(deprecationRepository.findByEndpointId(any()))
                 .thenReturn(Optional.empty());
-        when(fieldUsageRepository.findAllByEndpoint(any(), any(), any()))
-                .thenReturn(List.of());
+        when(jdbcTemplate.queryForObject(any(String.class), any(Class.class), any(), any()))
+                .thenReturn(0L);
     }
 }

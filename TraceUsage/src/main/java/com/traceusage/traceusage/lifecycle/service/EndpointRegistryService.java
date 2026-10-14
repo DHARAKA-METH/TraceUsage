@@ -21,7 +21,7 @@ public class EndpointRegistryService {
     }
 
     @Transactional
-    public void recordUsage(Application application, UsageEvent usageEvent) {
+    public ApiEndpoint recordUsage(Application application, UsageEvent usageEvent) {
         String httpMethod = usageEvent.getHttpMethod();
         String endpointPath = usageEvent.getEndpoint();
 
@@ -37,5 +37,7 @@ public class EndpointRegistryService {
                 || usageEvent.getOccurredAt().isBefore(application.getMonitoringStartedAt())) {
             application.updateMonitoringStartedAt(usageEvent.getOccurredAt());
         }
+
+        return endpoint;
     }
 }

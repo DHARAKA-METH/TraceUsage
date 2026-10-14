@@ -9,7 +9,6 @@ import com.traceusage.traceusage.analytics.dto.SchemaFieldAnalyticsResponse;
 import com.traceusage.traceusage.application.entity.Application;
 import com.traceusage.traceusage.application.exception.ApplicationNotFoundException;
 import com.traceusage.traceusage.application.repository.ApplicationRepository;
-import com.traceusage.traceusage.telemetry.repository.UsageEventRepository;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,14 +23,11 @@ import java.util.List;
 public class AnalyticsServiceImpl implements AnalyticsService {
 
     private final ApplicationRepository applicationRepository;
-    private final UsageEventRepository usageEventRepository;
     private final JdbcTemplate jdbcTemplate;
 
     public AnalyticsServiceImpl(ApplicationRepository applicationRepository,
-                                UsageEventRepository usageEventRepository,
                                 JdbcTemplate jdbcTemplate) {
         this.applicationRepository = applicationRepository;
-        this.usageEventRepository = usageEventRepository;
         this.jdbcTemplate = jdbcTemplate;
     }
 
@@ -47,7 +43,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 .findByProjectIdAndOwnerId(projectId, ownerId)
                 .orElseThrow(ApplicationNotFoundException::new);
 
-        List<EndpointAnalyticsItem> endpoints = usageEventRepository.findEndpointAnalytics(
+        List<EndpointAnalyticsItem> endpoints = queryEndpointAnalytics(
                 application.getId(),
                 effectiveFrom,
                 effectiveTo);
@@ -57,6 +53,36 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 application.getName(),
                 application.getEnvironment(),
                 endpoints);
+    }
+
+    private List<EndpointAnalyticsItem> queryEndpointAnalytics(Long applicationId,
+                                                              Instant from,
+                                                              Instant to) {
+        return jdbcTemplate.query("""
+                select
+                    ae.http_method,
+                    ae.endpoint_path,
+                    coalesce(sum(h.request_count), 0) as total_requests,
+                    coalesce(sum(h.success_count), 0) as success_count,
+                    coalesce(sum(h.error_count), 0) as failure_count,
+                    max(h.last_seen) as last_seen
+                from api_endpoints ae
+                join endpoint_usage_hourly h on h.endpoint_id = ae.id
+                where ae.application_id = ?
+                  and h.last_seen >= ?
+                  and h.first_seen <= ?
+                group by ae.http_method, ae.endpoint_path
+                order by total_requests desc, max(h.last_seen) desc
+                """, (rs, rowNum) -> {
+            Timestamp lastSeen = rs.getTimestamp("last_seen");
+            return new EndpointAnalyticsItem(
+                    rs.getString("http_method"),
+                    rs.getString("endpoint_path"),
+                    rs.getLong("total_requests"),
+                    rs.getLong("success_count"),
+                    rs.getLong("failure_count"),
+                    lastSeen == null ? null : lastSeen.toInstant());
+        }, applicationId, Timestamp.from(from), Timestamp.from(to));
     }
 
     @Override
@@ -127,21 +153,21 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                     o.endpoint,
                     nullif(o.schema_name, '') as schema_name,
                     o.field_path,
-                    f.client_id,
-                    f.client_version,
-                    coalesce(sum(f.access_count), 0) as total_accesses,
+                    h.client_id,
+                    h.client_version,
+                    coalesce(sum(h.access_count), 0) as total_accesses,
                     min(o.first_seen) as first_seen,
                     max(o.last_seen) as last_seen,
-                    max(f.observed_at) as last_accessed
+                    max(h.last_seen) as last_accessed
                 from observed_fields o
-                left join field_usage_events f
-                  on f.application_id = o.application_id
-                 and f.http_method = o.http_method
-                 and f.endpoint = o.endpoint
-                 and coalesce(f.schema_name, '') = coalesce(o.schema_name, '')
-                 and f.field_path = o.field_path
-                 and f.observed_at >= ?
-                 and f.observed_at <= ?
+                left join field_usage_hourly h
+                  on h.application_id = o.application_id
+                 and h.http_method = o.http_method
+                 and h.endpoint = o.endpoint
+                 and coalesce(h.schema_name, '') = coalesce(o.schema_name, '')
+                 and h.field_path = o.field_path
+                 and h.last_seen >= ?
+                 and h.first_seen <= ?
                 """);
 
         List<Object> params = new ArrayList<>();
@@ -149,11 +175,11 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         params.add(Timestamp.from(to));
 
         if (clientId != null) {
-            sql.append(" and f.client_id = ?\n");
+            sql.append(" and h.client_id = ?\n");
             params.add(clientId);
         }
         if (clientVersion != null) {
-            sql.append(" and f.client_version = ?\n");
+            sql.append(" and h.client_version = ?\n");
             params.add(clientVersion);
         }
 
@@ -177,8 +203,8 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                     o.endpoint,
                     o.schema_name,
                     o.field_path,
-                    f.client_id,
-                    f.client_version
+                    h.client_id,
+                    h.client_version
                 order by o.endpoint, o.field_path, total_accesses desc
                 """);
 
@@ -221,11 +247,11 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                         endpoint,
                         field_path,
                         sum(access_count) as total_accesses,
-                        max(observed_at) as last_accessed
-                    from field_usage_events
+                        max(last_seen) as last_accessed
+                    from field_usage_hourly
                     where application_id = ?
-                      and observed_at >= ?
-                      and observed_at <= ?
+                      and last_seen >= ?
+                      and first_seen <= ?
                     group by application_id, http_method, endpoint, field_path
                 )
                 select

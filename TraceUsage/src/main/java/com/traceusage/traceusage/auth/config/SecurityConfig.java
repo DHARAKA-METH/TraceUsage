@@ -46,6 +46,8 @@ public class SecurityConfig {
                                 "/api/v1/events/batch",
                                 "/api/v1/field-events/batch").permitAll()
                         .requestMatchers("/api/applications/**").authenticated()
+                        .requestMatchers("/actuator/health", "/actuator/health/**",
+                                "/actuator/info").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint((request, response, failure) -> {

@@ -3,6 +3,7 @@ package com.traceusage.traceusage.fieldusage.service;
 import com.traceusage.traceusage.application.entity.Application;
 import com.traceusage.traceusage.application.exception.ApplicationNotFoundException;
 import com.traceusage.traceusage.application.repository.ApplicationRepository;
+import com.traceusage.traceusage.aggregation.FieldUsageAggregationService;
 import com.traceusage.traceusage.fieldusage.dto.AccessedFieldRequest;
 import com.traceusage.traceusage.fieldusage.dto.FieldUsageBatchRequest;
 import com.traceusage.traceusage.fieldusage.dto.ObservedFieldsRequest;
@@ -28,15 +29,18 @@ public class FieldUsagePersistenceService {
     private final FieldUsageRepository fieldUsageRepository;
     private final ProcessedFieldUsageBatchRepository processedBatchRepository;
     private final ApplicationRepository applicationRepository;
+    private final FieldUsageAggregationService aggregationService;
 
     public FieldUsagePersistenceService(ObservedFieldRepository observedFieldRepository,
                                         FieldUsageRepository fieldUsageRepository,
                                         ProcessedFieldUsageBatchRepository processedBatchRepository,
-                                        ApplicationRepository applicationRepository) {
+                                        ApplicationRepository applicationRepository,
+                                        FieldUsageAggregationService aggregationService) {
         this.observedFieldRepository = observedFieldRepository;
         this.fieldUsageRepository = fieldUsageRepository;
         this.processedBatchRepository = processedBatchRepository;
         this.applicationRepository = applicationRepository;
+        this.aggregationService = aggregationService;
     }
 
     @Transactional
@@ -55,6 +59,9 @@ public class FieldUsagePersistenceService {
 
             int usageCount = saveFieldUsageEvents(application, request);
             System.out.println("SAVED -> field_usage_events rows=" + usageCount);
+
+            boolean aggregateUpdated = aggregationService.aggregateBatchIfNew(application, request);
+            System.out.println("SAVED -> field_usage_hourly aggregateUpdated=" + aggregateUpdated);
         } catch (DataIntegrityViolationException exception) {
             if (processedBatchRepository.existsByBatchId(request.batchId())) {
                 System.out.println("BATCH ALREADY PROCESSED -> skipping duplicate batchId=" + request.batchId());

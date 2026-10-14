@@ -1,13 +1,12 @@
 package com.traceusage.traceusage.lifecycle.service;
 
-import com.traceusage.traceusage.fieldusage.entity.FieldUsageEvent;
-import com.traceusage.traceusage.fieldusage.repository.FieldUsageRepository;
 import com.traceusage.traceusage.lifecycle.entity.ApiEndpoint;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.List;
 
 /**
  * Known-client analysis based on V2 field telemetry.
@@ -18,33 +17,39 @@ import java.util.List;
 @Component
 public class KnownClientAnalyzer {
 
-    private final FieldUsageRepository fieldUsageRepository;
+    private final JdbcTemplate jdbcTemplate;
 
-    public KnownClientAnalyzer(FieldUsageRepository fieldUsageRepository) {
-        this.fieldUsageRepository = fieldUsageRepository;
+    public KnownClientAnalyzer(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Transactional(readOnly = true)
     public KnownClientActivity analyze(ApiEndpoint endpoint, Instant activeSince) {
-        List<FieldUsageEvent> events = fieldUsageRepository.findAllByEndpoint(
+        Long totalClientTelemetryRows = jdbcTemplate.queryForObject("""
+                select count(*)
+                from field_usage_hourly
+                where application_id = ?
+                  and endpoint_id = ?
+                """, Long.class,
                 endpoint.getApplication().getId(),
-                endpoint.getHttpMethod(),
-                endpoint.getEndpointPath());
+                endpoint.getId());
 
-        if (events.isEmpty()) {
+        if (totalClientTelemetryRows == null || totalClientTelemetryRows == 0) {
             return new KnownClientActivity(0, false);
         }
 
-        List<FieldUsageEvent> recentEvents = events.stream()
-                .filter(event -> !event.getObservedAt().isBefore(activeSince))
-                .toList();
+        Integer activeClientCount = jdbcTemplate.queryForObject("""
+                select count(distinct client_id)
+                from field_usage_hourly
+                where application_id = ?
+                  and endpoint_id = ?
+                  and last_seen >= ?
+                """, Integer.class,
+                endpoint.getApplication().getId(),
+                endpoint.getId(),
+                Timestamp.from(activeSince));
 
-        int activeClientCount = (int) recentEvents.stream()
-                .map(FieldUsageEvent::getClientId)
-                .distinct()
-                .count();
-
-        return new KnownClientActivity(activeClientCount, true);
+        return new KnownClientActivity(activeClientCount == null ? 0 : activeClientCount, true);
     }
 
     public record KnownClientActivity(int activeClientCount, boolean clientCoverageSufficient) {
