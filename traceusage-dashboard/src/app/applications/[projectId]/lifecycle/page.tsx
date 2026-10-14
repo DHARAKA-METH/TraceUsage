@@ -1,7 +1,10 @@
 "use client";
 
 import { AuthGuard } from "@/components/AuthGuard";
+import { EmptyState } from "@/components/EmptyState";
 import { Navbar } from "@/components/Navbar";
+import { PageHeader } from "@/components/PageHeader";
+import { StatusBadge } from "@/components/StatusBadge";
 import { apiFetch } from "@/lib/api";
 import type { ApiResponse } from "@/types/api";
 import type { EndpointLifecycleItem, EndpointLifecycleStatus } from "@/types/lifecycle";
@@ -19,24 +22,6 @@ const FILTERS: Array<{ value: StatusFilter; label: string }> = [
   { value: "DEPRECATED_INACTIVE", label: "Deprecated, unused" },
   { value: "REMOVAL_CANDIDATE", label: "Removal candidates" },
 ];
-
-const STATUS_LABELS: Record<EndpointLifecycleStatus, string> = {
-  NEWLY_MONITORED: "Newly monitored",
-  ACTIVE: "Active",
-  INACTIVE: "Inactive",
-  DEPRECATED_ACTIVE: "Deprecated, still used",
-  DEPRECATED_INACTIVE: "Deprecated, unused",
-  REMOVAL_CANDIDATE: "Removal candidate",
-};
-
-const STATUS_COLORS: Record<EndpointLifecycleStatus, string> = {
-  NEWLY_MONITORED: "#6b7280",
-  ACTIVE: "#16a34a",
-  INACTIVE: "#d97706",
-  DEPRECATED_ACTIVE: "#ea580c",
-  DEPRECATED_INACTIVE: "#7c3aed",
-  REMOVAL_CANDIDATE: "#dc2626",
-};
 
 function formatDate(value: string | null) {
   if (!value) {
@@ -122,13 +107,13 @@ export default function LifecyclePage() {
     <AuthGuard>
       <Navbar />
       <main className="container grid">
-        <Link className="muted" href="/applications">← Back to applications</Link>
-        <div>
-          <h1>Endpoint lifecycle</h1>
-          <p className="muted">
-            Project <code>{params.projectId}</code>. Status is evidence for manual review, not an instruction to delete.
-          </p>
-        </div>
+        <PageHeader
+          backHref="/applications"
+          backLabel="Back to applications"
+          eyebrow="Lifecycle monitoring"
+          title="Endpoint lifecycle"
+          description={<>Project <code>{params.projectId}</code>. Status is evidence for manual review, not an instruction to delete.</>}
+        />
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
           {FILTERS.map((option) => (
@@ -149,7 +134,7 @@ export default function LifecyclePage() {
         {!loading && (
           <section className="card">
             {visible.length === 0 ? (
-              <p className="muted">No endpoints registered yet. Send telemetry from your instrumented app first.</p>
+              <EmptyState icon="⏱" title="No endpoints in this view" description="Send telemetry from your instrumented app or adjust the lifecycle filter." />
             ) : (
               <div style={{ overflowX: "auto" }}>
                 <table className="table">
@@ -169,10 +154,8 @@ export default function LifecyclePage() {
                         <td><code>{endpoint.method} {endpoint.endpoint}</code></td>
                         <td>{endpoint.requestCount}</td>
                         <td>{formatDate(endpoint.lastSeen)}</td>
-                        <td>{endpoint.deprecated ? "Yes" : "No"}</td>
-                        <td style={{ color: STATUS_COLORS[endpoint.status], fontWeight: 700 }}>
-                          {STATUS_LABELS[endpoint.status]}
-                        </td>
+                        <td>{endpoint.deprecated ? <StatusBadge status="DEPRECATED_INACTIVE" label="Deprecated" /> : <span className="muted">No</span>}</td>
+                        <td><StatusBadge status={endpoint.status} /></td>
                         <td>
                           <button className="button secondary" onClick={() => setSelected(endpoint)} type="button">
                             Open
@@ -194,7 +177,7 @@ export default function LifecyclePage() {
             </h2>
 
             <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-              <div><span className="muted">Lifecycle status</span><div style={{ fontWeight: 700, color: STATUS_COLORS[selected.status] }}>{STATUS_LABELS[selected.status]}</div></div>
+              <div><span className="muted">Lifecycle status</span><div style={{ marginTop: 6 }}><StatusBadge status={selected.status} /></div></div>
               <div><span className="muted">Total requests</span><div style={{ fontWeight: 700 }}>{selected.requestCount}</div></div>
               <div><span className="muted">Last seen</span><div style={{ fontWeight: 700 }}>{formatDate(selected.lastSeen)}</div></div>
               <div><span className="muted">Monitoring started</span><div style={{ fontWeight: 700 }}>{formatDate(selected.monitoringStartedAt)}</div></div>
@@ -202,7 +185,7 @@ export default function LifecyclePage() {
               <div><span className="muted">Known active clients</span><div style={{ fontWeight: 700 }}>{selected.activeClientCount}</div></div>
               <div><span className="muted">Monitoring coverage</span><div style={{ fontWeight: 700 }}>{selected.monitoringCoverageSufficient ? "Sufficient" : "Insufficient"}</div></div>
               <div><span className="muted">Client coverage</span><div style={{ fontWeight: 700 }}>{selected.clientCoverageSufficient ? "Sufficient" : "Unknown"}</div></div>
-              <div><span className="muted">Deprecated</span><div style={{ fontWeight: 700 }}>{selected.deprecated ? "Yes" : "No"}</div></div>
+              <div><span className="muted">Deprecated</span><div style={{ marginTop: 6 }}>{selected.deprecated ? <StatusBadge status="DEPRECATED_INACTIVE" label="Deprecated" /> : <span className="muted">No</span>}</div></div>
               <div><span className="muted">Deprecated since</span><div style={{ fontWeight: 700 }}>{formatDate(selected.deprecatedAt)}</div></div>
               <div><span className="muted">Replacement endpoint</span><div style={{ fontWeight: 700 }}>{selected.replacementEndpoint ?? "-"}</div></div>
               <div><span className="muted">Target removal date</span><div style={{ fontWeight: 700 }}>{selected.targetRemovalDate ?? "-"}</div></div>

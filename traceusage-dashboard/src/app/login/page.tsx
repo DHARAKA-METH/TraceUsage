@@ -36,10 +36,15 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="container" style={{ display: "grid", minHeight: "100vh", placeItems: "center" }}>
-      <div className="card" style={{ maxWidth: 440, width: "100%" }}>
-        <h1>Login</h1>
-        <p className="muted">Access your TraceUsage applications and endpoint analytics.</p>
+    <main className="container auth-shell">
+      <section className="auth-hero">
+        <div className="eyebrow">TraceUsage</div>
+        <h1>Monitor what your APIs actually use.</h1>
+        <p className="muted">Endpoint traffic, field access, OpenAPI schema intelligence, and lifecycle review in one developer-friendly dashboard.</p>
+      </section>
+      <div className="card elevated" style={{ width: "100%" }}>
+        <h1 style={{ fontSize: 34 }}>Welcome back</h1>
+        <p className="muted">Access your TraceUsage monitoring workspace.</p>
         <form className="form" onSubmit={submit}>
           <div>
             <label className="label" htmlFor="email">Email</label>

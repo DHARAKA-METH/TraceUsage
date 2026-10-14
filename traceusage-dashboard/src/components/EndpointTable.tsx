@@ -1,4 +1,6 @@
 import type { EndpointAnalyticsItem } from "@/types/analytics";
+import { EmptyState } from "./EmptyState";
+import { StatusBadge } from "./StatusBadge";
 
 function formatDate(value: string | null) {
   if (!value) {
@@ -13,7 +15,13 @@ function formatDate(value: string | null) {
 
 export function EndpointTable({ endpoints }: { endpoints: EndpointAnalyticsItem[] }) {
   if (endpoints.length === 0) {
-    return <p className="muted">No endpoint usage found for this period.</p>;
+    return (
+      <EmptyState
+        icon="≋"
+        title="No endpoint requests observed"
+        description="No endpoint telemetry matched this time window. Try widening the time range or send traffic through your instrumented API."
+      />
+    );
   }
 
   return (
@@ -32,11 +40,11 @@ export function EndpointTable({ endpoints }: { endpoints: EndpointAnalyticsItem[
         <tbody>
           {endpoints.map((endpoint) => (
             <tr key={`${endpoint.method}-${endpoint.endpoint}`}>
-              <td><strong>{endpoint.method}</strong></td>
+              <td><span className="badge info">{endpoint.method}</span></td>
               <td><code>{endpoint.endpoint}</code></td>
               <td>{endpoint.totalRequests}</td>
-              <td>{endpoint.successCount}</td>
-              <td>{endpoint.failureCount}</td>
+              <td><StatusBadge status="ACCESS_OBSERVED" label={`${endpoint.successCount} success`} /></td>
+              <td>{endpoint.failureCount > 0 ? <StatusBadge status="DEPRECATED_ACTIVE" label={`${endpoint.failureCount} failed`} /> : <span className="muted">0</span>}</td>
               <td>{formatDate(endpoint.lastSeen)}</td>
             </tr>
           ))}

@@ -1,8 +1,11 @@
 "use client";
 
 import { AuthGuard } from "@/components/AuthGuard";
+import { EmptyState } from "@/components/EmptyState";
 import { Navbar } from "@/components/Navbar";
+import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
+import { StatusBadge } from "@/components/StatusBadge";
 import { apiFetch } from "@/lib/api";
 import type { ApiResponse } from "@/types/api";
 import type { FieldAnalyticsResponse, SchemaFieldAnalyticsResponse } from "@/types/analytics";
@@ -96,23 +99,18 @@ export default function FieldAnalyticsPage() {
     };
   }, [analytics, schemaAnalytics]);
 
-  function schemaStatusLabel(status: string) {
-    if (status === "ACCESS_OBSERVED") return "Access observed";
-    if (status === "DEPRECATED_NO_ACCESS_OBSERVED") return "Deprecated, no access observed";
-    return "No access observed";
-  }
-
   return (
     <AuthGuard>
       <Navbar />
       <main className="container grid">
-        <Link className="muted" href="/applications">← Back to applications</Link>
-        <div>
-          <h1>{analytics?.applicationName ?? "Field usage"}</h1>
-          <p className="muted">
-            {analytics?.environment ?? "Loading environment"} · Project <code>{params.projectId}</code>
-          </p>
-        </div>
+        <PageHeader
+          backHref="/applications"
+          backLabel="Back to applications"
+          eyebrow="Field monitoring"
+          title={analytics?.applicationName ?? "Field usage"}
+          description={<>{analytics?.environment ?? "Loading environment"} · Project <code>{params.projectId}</code></>}
+          actions={<Link className="button secondary" href={`/applications/${params.projectId}/openapi`}>Import OpenAPI</Link>}
+        />
 
         <form className="card" onSubmit={submit}>
           <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
@@ -146,19 +144,19 @@ export default function FieldAnalyticsPage() {
         {analytics && !loading && (
           <>
             <section className="stats-grid">
-              <StatCard label="Fields" value={totals.fields} />
-              <StatCard label="Observed accesses" value={totals.accesses} />
-              <StatCard label="No access observed" value={totals.noAccess} />
-              <StatCard label="Schema fields" value={totals.schemaFields} />
-              <StatCard label="Deprecated schema fields" value={totals.deprecatedSchemaFields} />
-              <StatCard label="Schema no access observed" value={totals.schemaNoAccess} />
+              <StatCard label="Runtime fields" value={totals.fields} hint="Observed by SDK" tone="info" />
+              <StatCard label="Observed accesses" value={totals.accesses} hint="Total field reads" tone="success" />
+              <StatCard label="No access observed" value={totals.noAccess} hint="Runtime discovery only" tone="warning" />
+              <StatCard label="Schema fields" value={totals.schemaFields} hint="From OpenAPI" tone="purple" />
+              <StatCard label="Deprecated schema fields" value={totals.deprecatedSchemaFields} hint="Contract marked deprecated" tone="danger" />
+              <StatCard label="Schema no access observed" value={totals.schemaNoAccess} hint="Manual review signals" tone="warning" />
             </section>
 
             <section className="card">
               <div style={{ alignItems: "center", display: "flex", gap: 16, justifyContent: "space-between" }}>
                 <div>
                   <h2 style={{ marginTop: 0 }}>Schema-aware fields</h2>
-                  <p className="muted">
+                  <p className="muted" style={{ marginBottom: 0 }}>
                     OpenAPI contract fields joined with runtime access telemetry. This uses "No access observed", not "safe to delete".
                   </p>
                 </div>
@@ -168,7 +166,7 @@ export default function FieldAnalyticsPage() {
               </div>
 
               {!schemaAnalytics || schemaAnalytics.fields.length === 0 ? (
-                <p className="muted">No schema fields found. Import an OpenAPI document first.</p>
+                <EmptyState icon="{}" title="No schema fields imported" description="Upload an OpenAPI file to compare contract-defined fields with runtime usage." actionHref={`/applications/${params.projectId}/openapi`} actionLabel="Import OpenAPI" />
               ) : (
                 <div style={{ overflowX: "auto" }}>
                   <table className="table">
@@ -191,10 +189,10 @@ export default function FieldAnalyticsPage() {
                           <td><code>{field.fieldPath}</code></td>
                           <td>{field.fieldType ?? "-"}</td>
                           <td>{field.required ? "Yes" : "No"}</td>
-                          <td>{field.deprecated ? "Yes" : "No"}</td>
+                          <td>{field.deprecated ? <StatusBadge status="DEPRECATED_INACTIVE" label="Deprecated" /> : <span className="muted">No</span>}</td>
                           <td>{field.totalAccesses}</td>
                           <td>{formatDate(field.lastAccessed)}</td>
-                          <td>{schemaStatusLabel(field.status)}</td>
+                          <td><StatusBadge status={field.status} /></td>
                         </tr>
                       ))}
                     </tbody>
@@ -206,7 +204,7 @@ export default function FieldAnalyticsPage() {
             <section className="card">
               <h2 style={{ marginTop: 0 }}>Runtime field usage</h2>
               {analytics.fields.length === 0 ? (
-                <p className="muted">No field usage data found for these filters.</p>
+                 <EmptyState icon="⌁" title="No runtime field usage" description="No field access telemetry matched these filters. Open the demo web or widen the time range." />
               ) : (
                 <div style={{ overflowX: "auto" }}>
                   <table className="table">
@@ -230,7 +228,7 @@ export default function FieldAnalyticsPage() {
                           <td>{field.clientVersion ?? "-"}</td>
                           <td>{field.totalAccesses}</td>
                           <td>{formatDate(field.lastAccessed)}</td>
-                          <td>{field.status === "ACCESS_OBSERVED" ? "Access observed" : "No access observed"}</td>
+                          <td><StatusBadge status={field.status} /></td>
                         </tr>
                       ))}
                     </tbody>

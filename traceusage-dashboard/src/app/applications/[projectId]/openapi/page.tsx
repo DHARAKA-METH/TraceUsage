@@ -2,7 +2,9 @@
 
 import { AuthGuard } from "@/components/AuthGuard";
 import { Navbar } from "@/components/Navbar";
+import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
+import { StatusBadge } from "@/components/StatusBadge";
 import { apiFetch } from "@/lib/api";
 import type { ApiResponse } from "@/types/api";
 import type { OpenApiImportResponse } from "@/types/openapi";
@@ -64,16 +66,20 @@ export default function OpenApiImportPage() {
     <AuthGuard>
       <Navbar />
       <main className="container grid">
-        <Link className="muted" href="/applications">← Back to applications</Link>
+        <PageHeader
+          backHref="/applications"
+          backLabel="Back to applications"
+          eyebrow="Schema intelligence"
+          title="OpenAPI import"
+          description={<>Upload <code>openapi.json</code>, <code>openapi.yaml</code>, or <code>openapi.yml</code> so TraceUsage can discover contract-defined endpoints and response fields.</>}
+          actions={<Link className="button secondary" href={`/applications/${params.projectId}/fields`}>View schema analytics</Link>}
+        />
 
-        <div>
-          <h1>OpenAPI import</h1>
-          <p className="muted">
-            Upload <code>openapi.json</code>, <code>openapi.yaml</code>, or <code>openapi.yml</code> so TraceUsage can discover schema-defined endpoints and response fields.
-          </p>
-        </div>
-
-        <form className="card form" onSubmit={submit}>
+        <form className="card elevated form" onSubmit={submit}>
+          <div>
+            <h2>Import API contract</h2>
+            <p className="muted" style={{ marginBottom: 0 }}>TraceUsage will extract endpoints, response fields, and OpenAPI deprecated flags. Runtime values are never collected.</p>
+          </div>
           <div>
             <label className="label" htmlFor="openapi-file">OpenAPI file</label>
             <input
@@ -96,15 +102,20 @@ export default function OpenApiImportPage() {
         {result && (
           <>
             <section className="stats-grid">
-              <StatCard label="Endpoints discovered" value={result.endpointsDiscovered} />
-              <StatCard label="Fields discovered" value={result.fieldsDiscovered} />
-              <StatCard label="Deprecated endpoints" value={result.deprecatedEndpoints} />
-              <StatCard label="Deprecated fields" value={result.deprecatedFields} />
+              <StatCard label="Endpoints discovered" value={result.endpointsDiscovered} tone="info" />
+              <StatCard label="Fields discovered" value={result.fieldsDiscovered} tone="purple" />
+              <StatCard label="Deprecated endpoints" value={result.deprecatedEndpoints} tone={result.deprecatedEndpoints > 0 ? "warning" : "success"} />
+              <StatCard label="Deprecated fields" value={result.deprecatedFields} tone={result.deprecatedFields > 0 ? "danger" : "success"} />
             </section>
 
             <section className="card">
-              <h2 style={{ marginTop: 0 }}>Import result</h2>
-              <p><strong>Status:</strong> {result.status === "ALREADY_IMPORTED" ? "Already imported" : "Imported"}</p>
+              <div className="panel-title">
+                <div>
+                  <h2>Import result</h2>
+                  <p className="muted" style={{ marginBottom: 0 }}>Contract intelligence is now available in field analytics.</p>
+                </div>
+                <StatusBadge status={result.status} />
+              </div>
               <p><strong>File:</strong> {result.fileName}</p>
               <p><strong>Size:</strong> {formatBytes(result.sizeBytes)}</p>
               <p><strong>Imported at:</strong> {formatDate(result.importedAt)}</p>

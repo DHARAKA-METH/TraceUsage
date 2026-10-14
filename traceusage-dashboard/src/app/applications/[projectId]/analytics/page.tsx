@@ -3,6 +3,7 @@
 import { AuthGuard } from "@/components/AuthGuard";
 import { EndpointTable } from "@/components/EndpointTable";
 import { Navbar } from "@/components/Navbar";
+import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
 import { apiFetch } from "@/lib/api";
 import type { ApiResponse } from "@/types/api";
@@ -57,19 +58,19 @@ export default function AnalyticsPage() {
     <AuthGuard>
       <Navbar />
       <main className="container grid">
-        <Link className="muted" href="/applications">← Back to applications</Link>
-        <div style={{ alignItems: "end", display: "flex", gap: 16, justifyContent: "space-between" }}>
-          <div>
-            <h1>{analytics?.applicationName ?? "Endpoint analytics"}</h1>
-            <p className="muted">
-              {analytics?.environment ?? "Loading environment"} · Project <code>{params.projectId}</code>
-            </p>
-          </div>
-          <div style={{ minWidth: 280 }}>
+        <PageHeader
+          backHref="/applications"
+          backLabel="Back to applications"
+          eyebrow="Endpoint monitoring"
+          title={analytics?.applicationName ?? "Endpoint analytics"}
+          description={<>{analytics?.environment ?? "Loading environment"} · Project <code>{params.projectId}</code></>}
+          actions={(
+            <div style={{ minWidth: 280 }}>
             <label className="label" htmlFor="from">From</label>
             <input className="input" id="from" onChange={(event) => setFrom(new Date(event.target.value).toISOString())} type="datetime-local" />
-          </div>
-        </div>
+            </div>
+          )}
+        />
 
         {error && <p className="error">{error}</p>}
         {loading && <p>Loading analytics...</p>}
@@ -77,13 +78,18 @@ export default function AnalyticsPage() {
         {analytics && !loading && (
           <>
             <section className="stats-grid">
-              <StatCard label="Requests" value={totals.requests} />
-              <StatCard label="Endpoints" value={totals.endpointCount} />
-              <StatCard label="Errors" value={totals.errors} />
+              <StatCard label="Requests" value={totals.requests} hint="Total observed API calls" tone="info" />
+              <StatCard label="Endpoints" value={totals.endpointCount} hint="Routes seen in this window" tone="purple" />
+              <StatCard label="Errors" value={totals.errors} hint="4xx/5xx responses" tone={totals.errors > 0 ? "danger" : "success"} />
             </section>
 
             <section className="card">
-              <h2 style={{ marginTop: 0 }}>Endpoint usage</h2>
+              <div className="panel-title">
+                <div>
+                  <h2>Endpoint usage</h2>
+                  <p className="muted" style={{ marginBottom: 0 }}>Request volume, success/failure split, and latest observed traffic.</p>
+                </div>
+              </div>
               <EndpointTable endpoints={analytics.endpoints} />
             </section>
           </>

@@ -33,9 +33,15 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="container" style={{ display: "grid", minHeight: "100vh", placeItems: "center" }}>
-      <div className="card" style={{ maxWidth: 480, width: "100%" }}>
-        <h1>Create account</h1>
+    <main className="container auth-shell">
+      <section className="auth-hero">
+        <div className="eyebrow">Start monitoring</div>
+        <h1>Create a TraceUsage workspace.</h1>
+        <p className="muted">Generate keys, ingest telemetry, and compare runtime usage against your API contract.</p>
+      </section>
+      <div className="card elevated" style={{ width: "100%" }}>
+        <h1 style={{ fontSize: 34 }}>Create account</h1>
+        <p className="muted">Set up your developer account to begin monitoring applications.</p>
         <form className="form" onSubmit={submit}>
           <div>
             <label className="label" htmlFor="name">Name</label>
