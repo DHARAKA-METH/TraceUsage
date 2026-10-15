@@ -2,6 +2,7 @@
 
 import { apiFetch } from "@/lib/api";
 import { setToken } from "@/lib/auth";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import type { ApiResponse } from "@/types/api";
 import type { LoginResponse } from "@/types/auth";
 import Link from "next/link";
@@ -37,6 +38,7 @@ export default function LoginPage() {
 
   return (
     <main className="container auth-shell">
+      <div className="auth-theme-control"><ThemeToggle /></div>
       <section className="auth-hero">
         <div className="eyebrow">TraceUsage</div>
         <h1>Monitor what your APIs actually use.</h1>
