@@ -5,6 +5,8 @@ import { EmptyState } from "@/components/EmptyState";
 import { Navbar } from "@/components/Navbar";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
+import { LifecycleCharts } from "@/components/charts/LifecycleCharts";
+import { StatCard } from "@/components/StatCard";
 import { apiFetch } from "@/lib/api";
 import type { ApiResponse } from "@/types/api";
 import type { EndpointLifecycleItem, EndpointLifecycleStatus } from "@/types/lifecycle";
@@ -17,10 +19,10 @@ type StatusFilter = "ALL" | EndpointLifecycleStatus;
 const FILTERS: Array<{ value: StatusFilter; label: string }> = [
   { value: "ALL", label: "All endpoints" },
   { value: "ACTIVE", label: "Active" },
-  { value: "INACTIVE", label: "Inactive" },
+  { value: "INACTIVE", label: "Low activity" },
   { value: "DEPRECATED_ACTIVE", label: "Deprecated, still used" },
-  { value: "DEPRECATED_INACTIVE", label: "Deprecated, unused" },
-  { value: "REMOVAL_CANDIDATE", label: "Removal candidates" },
+  { value: "DEPRECATED_INACTIVE", label: "Deprecated, no access observed" },
+  { value: "REMOVAL_CANDIDATE", label: "Manual review candidates" },
 ];
 
 function formatDate(value: string | null) {
@@ -68,6 +70,12 @@ export default function LifecyclePage() {
   }, [load]);
 
   const visible = filter === "ALL" ? endpoints : endpoints.filter((endpoint) => endpoint.status === filter);
+  const lifecycleTotals = {
+    active: endpoints.filter((endpoint) => endpoint.status === "ACTIVE").length,
+    lowActivity: endpoints.filter((endpoint) => endpoint.status === "INACTIVE").length,
+    deprecated: endpoints.filter((endpoint) => endpoint.deprecated).length,
+    review: endpoints.filter((endpoint) => endpoint.status === "REMOVAL_CANDIDATE").length,
+  };
 
   async function submitDeprecation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -132,6 +140,14 @@ export default function LifecyclePage() {
         {loading && <p>Loading lifecycle data...</p>}
 
         {!loading && (
+          <>
+          <section className="stats-grid">
+            <StatCard label="Active" value={lifecycleTotals.active} hint="Recent observed traffic" tone="success" />
+            <StatCard label="Low activity" value={lifecycleTotals.lowActivity} hint="Past inactivity window" tone="neutral" />
+            <StatCard label="Deprecated" value={lifecycleTotals.deprecated} hint="Monitoring continues" tone="purple" />
+            <StatCard label="Manual review" value={lifecycleTotals.review} hint="Evidence, not automatic deletion" tone="warning" />
+          </section>
+          <LifecycleCharts endpoints={endpoints} />
           <section className="card">
             {visible.length === 0 ? (
               <EmptyState icon="⏱" title="No endpoints in this view" description="Send telemetry from your instrumented app or adjust the lifecycle filter." />
@@ -168,6 +184,7 @@ export default function LifecyclePage() {
               </div>
             )}
           </section>
+          </>
         )}
 
         {selected && (

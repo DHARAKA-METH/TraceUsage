@@ -6,6 +6,7 @@ import { Navbar } from "@/components/Navbar";
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
+import { FieldCharts } from "@/components/charts/FieldCharts";
 import { apiFetch } from "@/lib/api";
 import type { ApiResponse } from "@/types/api";
 import type { FieldAnalyticsResponse, SchemaFieldAnalyticsResponse } from "@/types/analytics";
@@ -151,6 +152,8 @@ export default function FieldAnalyticsPage() {
               <StatCard label="Deprecated schema fields" value={totals.deprecatedSchemaFields} hint="Contract marked deprecated" tone="danger" />
               <StatCard label="Schema no access observed" value={totals.schemaNoAccess} hint="Manual review signals" tone="warning" />
             </section>
+
+            <FieldCharts fields={analytics.fields} schemaFields={schemaAnalytics?.fields ?? []} />
 
             <section className="card">
               <div style={{ alignItems: "center", display: "flex", gap: 16, justifyContent: "space-between" }}>

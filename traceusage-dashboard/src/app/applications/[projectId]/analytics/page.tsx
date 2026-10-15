@@ -2,6 +2,7 @@
 
 import { AuthGuard } from "@/components/AuthGuard";
 import { EndpointTable } from "@/components/EndpointTable";
+import { EndpointCharts } from "@/components/charts/EndpointCharts";
 import { Navbar } from "@/components/Navbar";
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
@@ -82,6 +83,8 @@ export default function AnalyticsPage() {
               <StatCard label="Endpoints" value={totals.endpointCount} hint="Routes seen in this window" tone="purple" />
               <StatCard label="Errors" value={totals.errors} hint="4xx/5xx responses" tone={totals.errors > 0 ? "danger" : "success"} />
             </section>
+
+            <EndpointCharts endpoints={analytics.endpoints} />
 
             <section className="card">
               <div className="panel-title">

@@ -28,6 +28,9 @@
     --danger-text: #b91c1c;
     --violet-bg: #f5f3ff;
     --violet-text: #6d28d9;
+    --chart-grid: #e2e8f0;
+    --chart-axis: #64748b;
+    --chart-hover: rgba(59, 130, 246, 0.08);
   }
 
   :root.dark {
@@ -53,6 +56,9 @@
     --danger-text: #fda4af;
     --violet-bg: rgba(139, 92, 246, 0.14);
     --violet-text: #c4b5fd;
+    --chart-grid: rgba(148, 163, 184, 0.14);
+    --chart-axis: #8da0bc;
+    --chart-hover: rgba(96, 165, 250, 0.08);
   }
 
   * { box-sizing: border-box; }
@@ -179,6 +185,23 @@
   }
   .theme-toggle:hover { @apply -translate-y-px; border-color: var(--border-strong); color: var(--text); }
   .theme-toggle > span:first-child { @apply grid h-5 w-5 place-items-center rounded-md; background: var(--brand-soft); color: var(--brand-strong); }
+
+  .chart-grid { @apply grid gap-5 lg:grid-cols-2; }
+  .chart-card { min-width: 0; }
+  .chart-description { @apply mb-0 text-sm leading-6; }
+  .chart-canvas { @apply h-60 w-full; min-width: 0; }
+  .chart-canvas-tall { @apply h-80; }
+  .coverage-chart { @apply grid items-center gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(180px,0.8fr)]; }
+  .chart-legend-list { @apply grid gap-3; }
+  .chart-legend-item { @apply grid grid-cols-[12px_1fr_auto] items-center gap-2 text-sm; color: var(--text-muted); }
+  .chart-legend-item > span { @apply h-2.5 w-2.5 rounded-full; }
+  .chart-legend-item strong { color: var(--text); }
+  .inactivity-list { @apply grid gap-4; }
+  .inactivity-item { @apply grid gap-2; }
+  .inactivity-label { @apply flex items-center justify-between gap-3 text-sm; }
+  .inactivity-label > span, .inactivity-item small { color: var(--text-muted); }
+  .inactivity-track { @apply h-2 overflow-hidden rounded-full; background: var(--surface-subtle); }
+  .inactivity-track > span { @apply block h-full rounded-full; }
 
   .auth-shell { @apply grid min-h-screen place-items-center gap-6 py-8 md:grid-cols-[minmax(0,1fr)_minmax(360px,440px)]; }
   .auth-hero { @apply p-8 md:p-12; }
