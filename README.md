@@ -1,58 +1,31 @@
 # TraceUsage
 
-REST API usage and deprecation intelligence platform.
+Developers often lack a centralized way to understand how their applications are used across backend APIs and frontend interactions. Identifying frequently used endpoints, tracking user interactions, and understanding application usage can be challenging without proper analytics.
 
-TraceUsage helps development teams understand how REST APIs in production are actually used, identify endpoints and response fields that may need cleanup, and make better-informed lifecycle decisions.
+TraceUsage is a usage analytics platform that collects backend API telemetry and frontend interaction data, processes the collected information, and presents meaningful insights through a centralized dashboard.
 
-It includes a reusable Spring Boot starter and a TypeScript browser SDK for telemetry, plus Kafka-based ingestion, hourly usage aggregation, a Neon PostgreSQL backend, OpenAPI analysis, and a Next.js dashboard.
+### How It Works
+1. **Collect** — Capture backend API usage and frontend interaction data using dedicated SDKs.
+2. **Process** — Analyze the collected telemetry data to identify application usage patterns.
+3. **Store** — Store usage analytics and application metadata.
+4. **Visualize** — Present usage insights through a centralized dashboard.
 
+## Tech Stack
+- **Backend:** Spring Boot
+- **Frontend:** React / Next.js
+- **Event Streaming:** Apache Kafka
+- **Database:** PostgreSQL
+- **SDKs:** Spring Boot Starter and Browser SDK
+
+  
 ## Key features
 
-- Endpoint analytics: request counts, normalized routes, HTTP status distribution, and last-seen timestamps.
-- Response-field observations: automatic field discovery and JavaScript Proxy–based access tracking for instrumented responses.
-- API lifecycle intelligence: inactivity detection, deprecation workflows, and developer review support.
-- OpenAPI analysis: compare declared contracts with observed runtime behavior.
-- Asynchronous ingestion: Kafka topics and background processors for resilient telemetry handling.
-- Efficient storage: idempotent processing and hourly usage rollups, with configurable raw-event retention.
-- Environment isolation: separate configuration for development, staging, and production.
-- Privacy-oriented: collects usage metadata rather than sensitive request or response values.
+- **API Endpoint Monitoring** – Track API requests, usage counts, HTTP status codes, and last-seen activity.
+- **API Field Monitoring** – Discover response fields and track field-level usage.
+- **API Usage Analytics** – Analyze endpoint and field usage to identify potentially unused APIs and response fields.
 
 ## System architecture
-
-```mermaid
-flowchart TB
-    subgraph CUSTOMER["Customer Application"]
-        direction LR
-        subgraph BACKEND["Spring Boot Backend"]
-            REST["REST API"]
-            JAVA_SDK["traceusage-spring-boot-starter"]
-            REST --> JAVA_SDK
-        end
-        subgraph FRONTEND["React / Next.js Frontend"]
-            WEB["Frontend Application"]
-            BROWSER_SDK["traceusage-browser-sdk"]
-            WEB --> BROWSER_SDK
-        end
-        WEB -->|"Normal API requests"| REST
-    end
-
-    subgraph PLATFORM["TraceUsage Platform"]
-        COLLECTOR["Collector API · Spring Boot"]
-        KAFKA["Apache Kafka · Endpoint + Field Events"]
-        PROCESSORS["Event Processors · Deduplication + Hourly Aggregation"]
-        DB[("Neon PostgreSQL · Analytics + Metadata")]
-        ANALYSIS["TraceUsage Analysis · Spring Boot\nUsage + OpenAPI + Lifecycle"]
-        DASHBOARD["TraceUsage Dashboard · Next.js"]
-    end
-
-    JAVA_SDK -->|"Endpoint telemetry"| COLLECTOR
-    BROWSER_SDK -->|"Field telemetry"| COLLECTOR
-    COLLECTOR --> KAFKA --> PROCESSORS --> DB
-    DB <-->|"Queries and metadata"| ANALYSIS
-    DASHBOARD <-->|"REST analytics and management API"| ANALYSIS
-```
-
-> The Collector, Kafka consumers, and Analysis API are logical components within the TraceUsage Spring Boot server; they do not have to be separate microservices. The analytics database is expected to run in Neon (cloud), not as a local container.
+<img width="2362" height="892" alt="TraceUsage_Architecture drawio" src="https://github.com/user-attachments/assets/6bd9cedd-ca97-465c-aa23-7f9d7c55a070" />
 
 ## Repository modules
 
@@ -79,7 +52,7 @@ flowchart TB
 
 ---
 
-# Quick start — run TraceUsage locally
+## Quick start — run TraceUsage locally
 
 This guide uses Docker Compose and an external Neon PostgreSQL database. You do not need a local Postgres container.
 
@@ -155,33 +128,6 @@ Services and default addresses
 - Kafka (internal) — kafka:9092 (Docker network)
 - PostgreSQL — Neon cloud (external JDBC)
 
-Check startup status and logs:
-
-```bash
-docker compose ps
-docker compose logs --tail=100 backend
-curl http://localhost:8080/actuator/health
-```
-
-Expected health response: `{"status":"UP"}`
-
-List Kafka topics (inside the Kafka container):
-
-```bash
-docker exec traceusage-kafka \
-  /opt/kafka/bin/kafka-topics.sh \
-  --bootstrap-server localhost:9092 \
-  --list
-```
-
-Expected topics (when auto-creation is enabled):
-
-```
-traceusage.endpoint-events
-traceusage.field-events
-traceusage.endpoint-events.dlt
-traceusage.field-events.dlt
-```
 
 5) Create a monitored application
 
@@ -194,7 +140,7 @@ traceusage.field-events.dlt
 
 ---
 
-# Integrate TraceUsage into your applications
+## Integrate TraceUsage into your applications
 
 These steps describe integrating a new Spring Boot backend and a new React/Next.js frontend.
 
@@ -318,11 +264,11 @@ npm install
 npm run dev
 ```
 
-# Telemetry processing (overview)
+## Telemetry processing (overview)
 
 Customer SDKs → TraceUsage Collector → Kafka → Deduplication & Hourly Rollups → Neon PostgreSQL → Spring Boot Analysis → Next.js Dashboard
 
-# Stop and restart
+### Stop and restart
 
 Stop demos started with Maven/npm with Ctrl+C. To stop Docker platform without deleting Kafka data:
 
@@ -344,7 +290,7 @@ docker compose up -d --build
 
 Warning: `docker compose down -v` removes Docker named volumes (including Kafka data); it does not delete the external Neon database.
 
-# Troubleshooting
+## Troubleshooting
 
 - Containers fail to start: check `docker compose ps` and `docker compose logs --tail=100 backend`.
 - Backend cannot connect to Neon: verify host, SSL mode, username, password, and Flyway logs.
@@ -356,14 +302,21 @@ Warning: `docker compose down -v` removes Docker named volumes (including Kafka 
 - No backend endpoint telemetry: check `TRACEUSAGE_API_KEY`, Collector URL, and incoming requests.
 - Dashboard shows no usage: ensure correct application/environment is selected and inspect Kafka consumer logs.
 
-# Privacy & security
 
-- Keep `.env` and `.env.local` out of Git.
-- Never expose backend `tru_sk_...` keys in browser bundles.
-- Restrict public `tru_pk_...` keys to telemetry ingestion.
-- If a real API key or database password was ever committed, revoke/rotate it — removing it from the latest commit does not erase it from Git history.
-- Run migrations against an intended Neon development database or branch before applying to production.
+## Screenshots 
+<img width="1535" height="809" alt="2" src="https://github.com/user-attachments/assets/edff5563-6833-41e5-8ff3-5e22a0151cd1" />
+<img width="1405" height="781" alt="3" src="https://github.com/user-attachments/assets/d728f9b6-54b0-447f-8906-bc5103d80e00" />
+<img width="1431" height="798" alt="4" src="https://github.com/user-attachments/assets/83afba5c-6649-458e-9126-eaea54f0a30d" />
+<img width="1360" height="796" alt="5" src="https://github.com/user-attachments/assets/9a44df23-90cd-4b43-8a86-d68b50ee7b17" />
 
----
+
+
+
+
+
+
+
+
+
 
 Source: https://github.com/DHARAKA-METH/TraceUsage
