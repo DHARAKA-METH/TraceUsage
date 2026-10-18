@@ -16,4 +16,7 @@ public interface ApiEndpointRepository extends JpaRepository<ApiEndpoint, Long> 
             Long applicationId,
             String httpMethod,
             String endpointPath);
+
+    Optional<ApiEndpoint> findByEnvironmentIdAndHttpMethodAndEndpointPath(
+            Long environmentId, String httpMethod, String endpointPath);
 }

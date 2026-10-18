@@ -1,6 +1,7 @@
 package com.traceusage.traceusage.lifecycle.service;
 
 import com.traceusage.traceusage.application.entity.Application;
+import com.traceusage.traceusage.environment.entity.Environment;
 import com.traceusage.traceusage.lifecycle.entity.ApiEndpoint;
 import com.traceusage.traceusage.lifecycle.repository.ApiEndpointRepository;
 import com.traceusage.traceusage.telemetry.entity.UsageEvent;
@@ -22,21 +23,26 @@ public class EndpointRegistryService {
 
     @Transactional
     public ApiEndpoint recordUsage(Application application, UsageEvent usageEvent) {
+        if (usageEvent.getEnvironment() == null) {
+            throw new IllegalStateException("Telemetry event is missing its environment");
+        }
+        return recordUsage(application, usageEvent.getEnvironment(), usageEvent);
+    }
+
+    @Transactional
+    public ApiEndpoint recordUsage(Application application, Environment environment, UsageEvent usageEvent) {
         String httpMethod = usageEvent.getHttpMethod();
         String endpointPath = usageEvent.getEndpoint();
 
         ApiEndpoint endpoint = endpointRepository
-                .findByApplicationIdAndHttpMethodAndEndpointPath(
-                        application.getId(), httpMethod, endpointPath)
+                .findByEnvironmentIdAndHttpMethodAndEndpointPath(
+                        environment.getId(), httpMethod, endpointPath)
                 .orElseGet(() -> endpointRepository.save(
-                        ApiEndpoint.register(application, httpMethod, endpointPath)));
+                        ApiEndpoint.register(application, environment, httpMethod, endpointPath)));
 
         endpoint.recordUsage(usageEvent.getOccurredAt(), true);
 
-        if (application.getMonitoringStartedAt() == null
-                || usageEvent.getOccurredAt().isBefore(application.getMonitoringStartedAt())) {
-            application.updateMonitoringStartedAt(usageEvent.getOccurredAt());
-        }
+        environment.recordMonitoringStart(usageEvent.getOccurredAt());
 
         return endpoint;
     }

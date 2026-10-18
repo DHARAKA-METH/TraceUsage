@@ -9,6 +9,8 @@ import com.traceusage.traceusage.application.dto.CreateApplicationResponse;
 import com.traceusage.traceusage.application.entity.Application;
 import com.traceusage.traceusage.application.exception.ApplicationNotFoundException;
 import com.traceusage.traceusage.application.repository.ApplicationRepository;
+import com.traceusage.traceusage.environment.entity.Environment;
+import com.traceusage.traceusage.environment.repository.EnvironmentRepository;
 import com.traceusage.traceusage.shared.response.PageResponse;
 import com.traceusage.traceusage.user.entity.User;
 import com.traceusage.traceusage.user.repository.UserRepository;
@@ -27,17 +29,20 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     private final ApplicationRepository applicationRepository;
     private final ApiKeyRepository apiKeyRepository;
+    private final EnvironmentRepository environmentRepository;
     private final UserRepository userRepository;
     private final ApplicationCredentialGenerator credentialGenerator;
     private final ApiKeyHashService apiKeyHashService;
 
     public ApplicationServiceImpl(ApplicationRepository applicationRepository,
-                                  ApiKeyRepository apiKeyRepository,
+                                   ApiKeyRepository apiKeyRepository,
+                                   EnvironmentRepository environmentRepository,
                                   UserRepository userRepository,
                                   ApplicationCredentialGenerator credentialGenerator,
                                   ApiKeyHashService apiKeyHashService) {
         this.applicationRepository = applicationRepository;
         this.apiKeyRepository = apiKeyRepository;
+        this.environmentRepository = environmentRepository;
         this.userRepository = userRepository;
         this.credentialGenerator = credentialGenerator;
         this.apiKeyHashService = apiKeyHashService;
@@ -55,17 +60,18 @@ public class ApplicationServiceImpl implements ApplicationService {
                 request.environment().toLowerCase(Locale.ROOT),
                 owner);
         Application savedApplication = applicationRepository.save(application);
+        Environment environment = environmentRepository.save(Environment.create(savedApplication, request.environment()));
 
         String rawApiKey = credentialGenerator.generateApiKey();
         ApiKey apiKey = ApiKey.create(
-                savedApplication,
+                savedApplication, environment,
                 credentialGenerator.extractPrefix(rawApiKey),
                 apiKeyHashService.hash(rawApiKey));
         apiKeyRepository.save(apiKey);
 
         String rawPublicIngestKey = credentialGenerator.generatePublicIngestKey();
         ApiKey publicIngestKey = ApiKey.create(
-                savedApplication,
+                savedApplication, environment,
                 credentialGenerator.extractPrefix(rawPublicIngestKey),
                 apiKeyHashService.hash(rawPublicIngestKey),
                 "PUBLIC_BROWSER");

@@ -1,6 +1,7 @@
 package com.traceusage.traceusage.lifecycle.entity;
 
 import com.traceusage.traceusage.application.entity.Application;
+import com.traceusage.traceusage.environment.entity.Environment;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -31,6 +32,10 @@ public class ApiEndpoint {
     @JoinColumn(name = "application_id", nullable = false)
     private Application application;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "environment_id")
+    private Environment environment;
+
     @Column(name = "http_method", nullable = false, length = 10)
     private String httpMethod;
 
@@ -59,6 +64,12 @@ public class ApiEndpoint {
 
     public static ApiEndpoint register(Application application, String httpMethod, String endpointPath) {
         return new ApiEndpoint(application, httpMethod, endpointPath);
+    }
+
+    public static ApiEndpoint register(Application application, Environment environment, String httpMethod, String endpointPath) {
+        ApiEndpoint endpoint = register(application, httpMethod, endpointPath);
+        endpoint.environment = Objects.requireNonNull(environment);
+        return endpoint;
     }
 
     public void recordUsage(Instant occurredAt, boolean counted) {

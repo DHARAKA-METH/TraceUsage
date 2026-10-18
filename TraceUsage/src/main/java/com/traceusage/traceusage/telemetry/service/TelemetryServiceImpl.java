@@ -1,7 +1,9 @@
 package com.traceusage.traceusage.telemetry.service;
 
 import com.traceusage.traceusage.apikey.service.ApiKeyAuthenticationService;
+import com.traceusage.traceusage.apikey.entity.ApiKey;
 import com.traceusage.traceusage.application.entity.Application;
+import com.traceusage.traceusage.environment.entity.Environment;
 import com.traceusage.traceusage.messaging.config.IngestionProperties;
 import com.traceusage.traceusage.messaging.dto.EndpointTelemetryMessage;
 import com.traceusage.traceusage.messaging.exception.KafkaIngestionException;
@@ -38,36 +40,41 @@ public class TelemetryServiceImpl implements TelemetryService {
 
     @Override
     public void collect(String apiKey, UsageEventRequest request) {
-        Application application = apiKeyAuthenticationService.authenticate(apiKey);
+        ApiKey authenticatedKey = apiKeyAuthenticationService.authenticateKey(apiKey);
+        Application application = authenticatedKey.getApplication();
+        Environment environment = requireEnvironment(authenticatedKey);
 
         if (ingestionProperties.isKafkaMode()) {
-            publishBatch(application, List.of(request));
+            publishBatch(application, environment, List.of(request));
             return;
         }
 
-        persistenceService.saveIfNew(application, request);
+        persistenceService.saveIfNew(application, environment, request);
     }
 
     @Override
     public void collectBatch(String apiKey, BatchUsageEventRequest request) {
-        Application application = apiKeyAuthenticationService.authenticate(apiKey);
+        ApiKey authenticatedKey = apiKeyAuthenticationService.authenticateKey(apiKey);
+        Application application = authenticatedKey.getApplication();
+        Environment environment = requireEnvironment(authenticatedKey);
         LinkedHashMap<UUID, UsageEventRequest> uniqueEventsById = new LinkedHashMap<>();
         request.events().forEach(event -> uniqueEventsById.putIfAbsent(event.eventId(), event));
         List<UsageEventRequest> uniqueRequestEvents = uniqueEventsById.values().stream().toList();
 
         if (ingestionProperties.isKafkaMode()) {
-            publishBatch(application, uniqueRequestEvents);
+            publishBatch(application, environment, uniqueRequestEvents);
             return;
         }
 
-        persistenceService.saveBatchIfNew(application, uniqueRequestEvents);
+        persistenceService.saveBatchIfNew(application, environment, uniqueRequestEvents);
     }
 
-    private void publishBatch(Application application, List<UsageEventRequest> events) {
+    private void publishBatch(Application application, Environment environment, List<UsageEventRequest> events) {
         CompletableFuture<?>[] futures = events.stream()
                 .map(event -> kafkaPublisher().publish(EndpointTelemetryMessage.create(
                         event.eventId(),
                         application.getId(),
+                        environment.getId(),
                         event.method().trim().toUpperCase(Locale.ROOT),
                         event.endpoint().trim(),
                         event.statusCode(),
@@ -82,6 +89,11 @@ public class TelemetryServiceImpl implements TelemetryService {
         } catch (RuntimeException exception) {
             throw new KafkaIngestionException("Kafka endpoint telemetry publication failed", exception);
         }
+    }
+
+    private Environment requireEnvironment(ApiKey apiKey) {
+        if (apiKey.getEnvironment() == null) throw new IllegalStateException("API key has no environment binding");
+        return apiKey.getEnvironment();
     }
 
     private EndpointEventPublisher kafkaPublisher() {

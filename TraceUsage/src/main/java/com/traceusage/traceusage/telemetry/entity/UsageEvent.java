@@ -1,6 +1,7 @@
 package com.traceusage.traceusage.telemetry.entity;
 
 import com.traceusage.traceusage.application.entity.Application;
+import com.traceusage.traceusage.environment.entity.Environment;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -35,6 +36,10 @@ public class UsageEvent {
     @JoinColumn(name = "application_id", nullable = false)
     private Application application;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "environment_id")
+    private Environment environment;
+
     @Column(name = "http_method", nullable = false, length = 10)
     private String httpMethod;
 
@@ -65,5 +70,12 @@ public class UsageEvent {
         usageEvent.occurredAt = Objects.requireNonNull(occurredAt);
         usageEvent.createdAt = Instant.now();
         return usageEvent;
+    }
+
+    public static UsageEvent create(UUID eventId, Application application, Environment environment,
+                                    String httpMethod, String endpoint, Integer statusCode, Instant occurredAt) {
+        UsageEvent event = create(eventId, application, httpMethod, endpoint, statusCode, occurredAt);
+        event.environment = Objects.requireNonNull(environment);
+        return event;
     }
 }

@@ -8,9 +8,9 @@ import java.util.Optional;
 
 public interface ApiKeyRepository extends JpaRepository<ApiKey, Long> {
 
-    @EntityGraph(attributePaths = "application")
+    @EntityGraph(attributePaths = {"application", "environment"})
     Optional<ApiKey> findByKeyHashAndRevokedAtIsNull(String keyHash);
 
-    @EntityGraph(attributePaths = "application")
+    @EntityGraph(attributePaths = {"application", "environment"})
     Optional<ApiKey> findByKeyHashAndKeyTypeAndRevokedAtIsNull(String keyHash, String keyType);
 }

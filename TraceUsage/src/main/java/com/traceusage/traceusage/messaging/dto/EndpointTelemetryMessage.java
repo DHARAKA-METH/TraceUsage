@@ -7,6 +7,7 @@ public record EndpointTelemetryMessage(
         int schemaVersion,
         UUID eventId,
         Long applicationId,
+        Long environmentId,
         String method,
         String endpoint,
         int statusCode,
@@ -15,7 +16,8 @@ public record EndpointTelemetryMessage(
     public static final int CURRENT_SCHEMA_VERSION = 1;
 
     public static EndpointTelemetryMessage create(UUID eventId,
-                                                  Long applicationId,
+                                                   Long applicationId,
+                                                   Long environmentId,
                                                   String method,
                                                   String endpoint,
                                                   int statusCode,
@@ -24,6 +26,7 @@ public record EndpointTelemetryMessage(
                 CURRENT_SCHEMA_VERSION,
                 eventId,
                 applicationId,
+                environmentId,
                 method,
                 endpoint,
                 statusCode,

@@ -2,6 +2,7 @@ package com.traceusage.traceusage.apikey.service;
 
 import com.traceusage.traceusage.apikey.exception.InvalidApiKeyException;
 import com.traceusage.traceusage.apikey.repository.ApiKeyRepository;
+import com.traceusage.traceusage.apikey.entity.ApiKey;
 import com.traceusage.traceusage.application.entity.Application;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,13 +21,16 @@ public class ApiKeyAuthenticationService {
     }
 
     public Application authenticate(String rawApiKey) {
+        return authenticateKey(rawApiKey).getApplication();
+    }
+
+    public ApiKey authenticateKey(String rawApiKey) {
         if (rawApiKey == null || rawApiKey.isBlank()) {
             throw new InvalidApiKeyException("Invalid API key");
         }
 
         String keyHash = apiKeyHashService.hash(rawApiKey.trim());
         return apiKeyRepository.findByKeyHashAndRevokedAtIsNull(keyHash)
-                .map(apiKey -> apiKey.getApplication())
                 .orElseThrow(() -> new InvalidApiKeyException("Invalid API key"));
     }
 }

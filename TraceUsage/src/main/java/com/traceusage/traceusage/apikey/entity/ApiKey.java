@@ -1,6 +1,7 @@
 package com.traceusage.traceusage.apikey.entity;
 
 import com.traceusage.traceusage.application.entity.Application;
+import com.traceusage.traceusage.environment.entity.Environment;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -31,6 +32,10 @@ public class ApiKey {
     @JoinColumn(name = "application_id", nullable = false)
     private Application application;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "environment_id")
+    private Environment environment;
+
     @Column(name = "key_prefix", nullable = false, length = 30)
     private String keyPrefix;
 
@@ -60,5 +65,15 @@ public class ApiKey {
         ApiKey apiKey = create(application, keyPrefix, keyHash);
         apiKey.keyType = Objects.requireNonNull(keyType);
         return apiKey;
+    }
+
+    public static ApiKey create(Application application, Environment environment, String keyPrefix, String keyHash, String keyType) {
+        ApiKey apiKey = create(application, keyPrefix, keyHash, keyType);
+        apiKey.environment = Objects.requireNonNull(environment);
+        return apiKey;
+    }
+
+    public static ApiKey create(Application application, Environment environment, String keyPrefix, String keyHash) {
+        return create(application, environment, keyPrefix, keyHash, "SECRET");
     }
 }
