@@ -1,6 +1,7 @@
 "use client";
 
 import { AuthGuard } from "@/components/AuthGuard";
+import { ApplicationTabs } from "@/components/ApplicationTabs";
 import { EndpointTable } from "@/components/EndpointTable";
 import { EndpointCharts } from "@/components/charts/EndpointCharts";
 import { Navbar } from "@/components/Navbar";
@@ -60,8 +61,8 @@ export default function AnalyticsPage() {
       <Navbar />
       <main className="container grid">
         <PageHeader
-          backHref="/applications"
-          backLabel="Back to applications"
+          backHref={`/applications/${params.projectId}`}
+          backLabel="Application overview"
           eyebrow="Endpoint monitoring"
           title={analytics?.applicationName ?? "Endpoint analytics"}
           description={<>{analytics?.environment ?? "Loading environment"} · Project <code>{params.projectId}</code></>}
@@ -72,6 +73,7 @@ export default function AnalyticsPage() {
             </div>
           )}
         />
+        <ApplicationTabs projectId={params.projectId} />
 
         {error && <p className="error">{error}</p>}
         {loading && <p>Loading analytics...</p>}

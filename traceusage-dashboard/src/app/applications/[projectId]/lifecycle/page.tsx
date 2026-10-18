@@ -1,6 +1,7 @@
 "use client";
 
 import { AuthGuard } from "@/components/AuthGuard";
+import { ApplicationTabs } from "@/components/ApplicationTabs";
 import { EmptyState } from "@/components/EmptyState";
 import { Navbar } from "@/components/Navbar";
 import { PageHeader } from "@/components/PageHeader";
@@ -116,12 +117,13 @@ export default function LifecyclePage() {
       <Navbar />
       <main className="container grid">
         <PageHeader
-          backHref="/applications"
-          backLabel="Back to applications"
+          backHref={`/applications/${params.projectId}`}
+          backLabel="Application overview"
           eyebrow="Lifecycle monitoring"
           title="Endpoint lifecycle"
           description={<>Project <code>{params.projectId}</code>. Status is evidence for manual review, not an instruction to delete.</>}
         />
+        <ApplicationTabs projectId={params.projectId} />
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
           {FILTERS.map((option) => (

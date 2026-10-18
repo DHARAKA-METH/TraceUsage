@@ -1,6 +1,7 @@
 "use client";
 
 import { AuthGuard } from "@/components/AuthGuard";
+import { ApplicationTabs } from "@/components/ApplicationTabs";
 import { Navbar } from "@/components/Navbar";
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
@@ -67,13 +68,14 @@ export default function OpenApiImportPage() {
       <Navbar />
       <main className="container grid">
         <PageHeader
-          backHref="/applications"
-          backLabel="Back to applications"
+          backHref={`/applications/${params.projectId}`}
+          backLabel="Application overview"
           eyebrow="Schema intelligence"
           title="OpenAPI import"
           description={<>Upload <code>openapi.json</code>, <code>openapi.yaml</code>, or <code>openapi.yml</code> so TraceUsage can discover contract-defined endpoints and response fields.</>}
           actions={<Link className="button secondary" href={`/applications/${params.projectId}/fields`}>View schema analytics</Link>}
         />
+        <ApplicationTabs projectId={params.projectId} />
 
         <form className="card elevated form" onSubmit={submit}>
           <div>

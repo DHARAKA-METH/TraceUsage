@@ -1,6 +1,7 @@
 "use client";
 
 import { AuthGuard } from "@/components/AuthGuard";
+import { ApplicationTabs } from "@/components/ApplicationTabs";
 import { EmptyState } from "@/components/EmptyState";
 import { Navbar } from "@/components/Navbar";
 import { PageHeader } from "@/components/PageHeader";
@@ -105,13 +106,14 @@ export default function FieldAnalyticsPage() {
       <Navbar />
       <main className="container grid">
         <PageHeader
-          backHref="/applications"
-          backLabel="Back to applications"
+          backHref={`/applications/${params.projectId}`}
+          backLabel="Application overview"
           eyebrow="Field monitoring"
           title={analytics?.applicationName ?? "Field usage"}
           description={<>{analytics?.environment ?? "Loading environment"} · Project <code>{params.projectId}</code></>}
           actions={<Link className="button secondary" href={`/applications/${params.projectId}/openapi`}>Import OpenAPI</Link>}
         />
+        <ApplicationTabs projectId={params.projectId} />
 
         <form className="card" onSubmit={submit}>
           <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>

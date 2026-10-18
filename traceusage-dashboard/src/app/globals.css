@@ -186,6 +186,56 @@
   .theme-toggle:hover { @apply -translate-y-px; border-color: var(--border-strong); color: var(--text); }
   .theme-toggle > span:first-child { @apply grid h-5 w-5 place-items-center rounded-md; background: var(--brand-soft); color: var(--brand-strong); }
 
+  .application-tabs { @apply flex gap-1 overflow-x-auto border-b pb-px; border-color: var(--border); scrollbar-width: thin; }
+  .application-tab { @apply relative shrink-0 px-4 py-3 text-sm font-bold transition; color: var(--text-muted); }
+  .application-tab:hover { color: var(--text); background: var(--surface-subtle); }
+  .application-tab::after { content: ""; @apply absolute right-3 bottom-0 left-3 h-0.5 scale-x-0 rounded-full transition-transform; background: var(--brand); }
+  .application-tab.active { color: var(--text); }
+  .application-tab.active::after { @apply scale-x-100; }
+  .application-tab:focus-visible { @apply rounded-lg outline-none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 30%, transparent); }
+
+  .application-list { @apply grid gap-2; }
+  .application-row { @apply grid items-center gap-4 rounded-2xl border p-4 transition sm:grid-cols-[42px_1fr_auto_24px]; border-color: transparent; }
+  .application-row:hover { @apply -translate-y-px; border-color: var(--border-strong); background: var(--surface-subtle); }
+  .application-row-icon { @apply grid h-10 w-10 place-items-center rounded-xl text-xl; color: var(--brand-strong); background: var(--brand-soft); }
+  .application-row-primary { @apply grid gap-1; min-width: 0; }
+  .application-row-primary strong { @apply truncate; color: var(--text); }
+  .application-row-primary small { @apply truncate; color: var(--text-muted); }
+  .application-row-arrow { @apply text-xl; color: var(--text-faint); }
+
+  .stat-link { @apply rounded-[22px] outline-none transition; }
+  .stat-link:hover .card { @apply -translate-y-0.5; border-color: var(--border-strong); }
+  .stat-link:focus-visible { box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 25%, transparent); }
+  .workspace-grid { @apply grid gap-5 lg:grid-cols-[1.35fr_0.9fr]; }
+  .workspace-panel { min-height: 260px; }
+  .workspace-actions { @apply grid gap-2 sm:grid-cols-2; }
+  .workspace-actions a { @apply grid grid-cols-[1fr_auto] gap-x-3 rounded-xl border p-4 transition; border-color: var(--border); background: var(--surface-subtle); }
+  .workspace-actions a:hover { @apply -translate-y-px; border-color: var(--border-strong); background: var(--brand-soft); }
+  .workspace-actions strong { color: var(--text); }
+  .workspace-actions span { @apply col-start-1 text-sm; color: var(--text-muted); }
+  .workspace-actions b { @apply row-span-2 self-center text-lg; color: var(--brand); }
+  .coverage-list { @apply grid gap-3; }
+  .coverage-list > div { @apply flex items-center justify-between gap-4 rounded-xl border px-4 py-3 text-sm; border-color: var(--border); background: var(--surface-subtle); }
+  .coverage-list span { color: var(--text-muted); }
+  .coverage-list strong { @apply text-right; color: var(--text); }
+  .skeleton-card { @apply h-38 animate-pulse rounded-[22px] border; border-color: var(--border); background: linear-gradient(90deg, var(--surface-subtle), color-mix(in srgb, var(--surface-subtle) 65%, var(--surface)), var(--surface-subtle)); }
+
+  .credential-intro { @apply rounded-[22px] border p-6; border-color: var(--border); background: linear-gradient(135deg, var(--brand-soft), var(--surface)); }
+  .credential-intro h2 { @apply mb-2; }
+  .credential-intro p { @apply mb-0; max-width: 680px; }
+  .credential-card { @apply relative overflow-hidden rounded-[22px] border p-6; background: var(--surface-solid); }
+  .credential-card.secret { border-color: color-mix(in srgb, var(--danger-text) 38%, var(--border)); }
+  .credential-card.public { border-color: color-mix(in srgb, var(--brand) 42%, var(--border)); }
+  .credential-card::before { content: ""; @apply absolute inset-x-0 top-0 h-1; }
+  .credential-card.secret::before { background: linear-gradient(90deg, #fb7185, #f59e0b); }
+  .credential-card.public::before { background: linear-gradient(90deg, #60a5fa, #818cf8); }
+  .credential-heading { @apply mb-4 flex items-center justify-between gap-3; }
+  .credential-kind { @apply rounded-full px-2.5 py-1 text-xs font-black uppercase tracking-wider; background: var(--surface-subtle); color: var(--text); }
+  .credential-once { @apply text-xs font-bold; color: var(--warning-text); }
+  .credential-card h3 { @apply mb-2 text-xl; }
+  .credential-value { @apply my-4 block w-full overflow-x-auto rounded-xl border p-4 text-sm; border-color: var(--border-strong); background: #070d1d; color: #f8fafc; }
+  .config-block { @apply overflow-x-auto rounded-xl border p-4 text-sm; border-color: var(--border); background: var(--surface-subtle); color: var(--text); }
+
   .chart-grid { @apply grid gap-5 lg:grid-cols-2; }
   .chart-card { min-width: 0; }
   .chart-description { @apply mb-0 text-sm leading-6; }

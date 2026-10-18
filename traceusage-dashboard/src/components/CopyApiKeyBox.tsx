@@ -6,10 +6,12 @@ export function CopyApiKeyBox({
   apiKey,
   title = "Copy your API key now",
   description = "This raw key is returned only when the application is created.",
+  kind = "secret",
 }: {
   apiKey: string;
   title?: string;
   description?: string;
+  kind?: "secret" | "public";
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -19,13 +21,14 @@ export function CopyApiKeyBox({
   }
 
   return (
-    <div className="card" style={{ borderColor: "#facc15", background: "#fffbeb" }}>
-      <h3 style={{ marginTop: 0 }}>{title}</h3>
+    <section className={`credential-card ${kind}`}>
+      <div className="credential-heading"><span className="credential-kind">{kind === "secret" ? "Server secret" : "Browser public"}</span><span className="credential-once">Shown once</span></div>
+      <h3>{title}</h3>
       <p className="muted">{description}</p>
-      <code style={{ display: "block", overflowX: "auto", padding: 12, background: "white", borderRadius: 8 }}>{apiKey}</code>
-      <button className="button" onClick={copy} style={{ marginTop: 12 }} type="button">
-        {copied ? "Copied" : "Copy API key"}
+      <code className="credential-value">{apiKey}</code>
+      <button className="button" onClick={copy} type="button">
+        {copied ? "✓ Copied" : "Copy key"}
       </button>
-    </div>
+    </section>
   );
 }

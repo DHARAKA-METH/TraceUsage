@@ -45,11 +45,13 @@ export default function NewApplicationPage() {
 
         {created ? (
           <div className="grid">
-            <CopyApiKeyBox apiKey={created.apiKey} />
+            <section className="credential-intro"><span className="eyebrow">Application created</span><h2>Save these credentials now</h2><p className="muted">Keys are displayed once. Store the server secret in protected backend configuration and never place it in browser code.</p></section>
+            <CopyApiKeyBox apiKey={created.apiKey} description="Use this tru_sk_ key only in a server-side Spring Boot environment variable." title="Backend secret key" />
             {created.publicIngestKey && (
               <CopyApiKeyBox
                 apiKey={created.publicIngestKey}
-                title="Copy your public ingest key"
+                kind="public"
+                title="Browser public ingest key"
                 description="Use this tru_pk_ key in frontend browsers (TraceUsage Browser SDK). It can only submit browser field telemetry."
               />
             )}
@@ -58,7 +60,7 @@ export default function NewApplicationPage() {
               <p className="muted">Project ID: <code>{created.projectId}</code></p>
               <p className="muted">Environment: {created.environment}</p>
               <p className="muted" style={{ marginTop: 20, marginBottom: 8 }}>Spring Boot starter configuration</p>
-              <pre style={{ background: "#f8fafc", borderRadius: 8, overflowX: "auto", padding: 16 }}>{`traceusage.enabled=true
+              <pre className="config-block">{`traceusage.enabled=true
 traceusage.server-url=http://localhost:8080
 traceusage.api-key=${created.apiKey}
 traceusage.batch-size=100
@@ -66,7 +68,7 @@ traceusage.queue-capacity=10000`}</pre>
               {created.publicIngestKey && (
                 <>
                   <p className="muted" style={{ marginTop: 20, marginBottom: 8 }}>Browser SDK configuration</p>
-                  <pre style={{ background: "#f8fafc", borderRadius: 8, overflowX: "auto", padding: 16 }}>{`NEXT_PUBLIC_TRACEUSAGE_SERVER_URL=http://localhost:8080
+                  <pre className="config-block">{`NEXT_PUBLIC_TRACEUSAGE_SERVER_URL=http://localhost:8080
 NEXT_PUBLIC_TRACEUSAGE_PUBLIC_KEY=${created.publicIngestKey}
 NEXT_PUBLIC_TRACEUSAGE_PROJECT_ID=${created.projectId}
 NEXT_PUBLIC_TRACEUSAGE_CLIENT_ID=product-web
@@ -74,8 +76,7 @@ NEXT_PUBLIC_TRACEUSAGE_CLIENT_VERSION=1.0.0`}</pre>
                 </>
               )}
               <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-                <Link className="button" href={`/applications/${created.projectId}/analytics`}>Endpoint analytics</Link>
-                <Link className="button secondary" href={`/applications/${created.projectId}/fields`}>Field analytics</Link>
+                <Link className="button" href={`/applications/${created.projectId}`}>Open application workspace</Link>
               </div>
             </div>
           </div>
