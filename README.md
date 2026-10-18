@@ -191,3 +191,33 @@ cd traceusage-dashboard && npm run build
 The PostgreSQL aggregation tests use a real disposable PostgreSQL (embedded
 binary, Testcontainers, or `-Dtraceusage.it.jdbc-url=...` in CI) and run the
 production Flyway migrations before exercising the production aggregation code.
+
+## Optional telemetry demo
+
+The demo applications are intentionally outside the production Docker Compose
+stack. They provide controlled traffic for validating endpoint, field, OpenAPI,
+and lifecycle views.
+
+1. Create an application in the dashboard and keep its generated `tru_sk_...`,
+   `tru_pk_...`, and project id out of source control.
+2. Start the API with its server secret:
+
+   ```bash
+   cd traceusage-demo-api
+   TRACEUSAGE_API_KEY=tru_sk_replace_me TRACEUSAGE_SERVER_URL=http://localhost:8080 mvn spring-boot:run
+   ```
+
+3. Copy `traceusage-demo-web/.env.example` to `.env.local`, supply the public
+   key and project id, then start the browser demo:
+
+   ```bash
+   cd traceusage-demo-web
+   npm install && npm run dev
+   ```
+
+Open `http://localhost:3001`, use Catalog, Product detail, Reviews, Orders, and
+Endpoint test controls, then wait at least five seconds for browser batch
+flushes. Import `traceusage-demo-api/openapi/demo-api.yaml` from the
+application's OpenAPI tab. The UI deliberately does not read several contract
+fields (including deprecated `legacyCode`), producing `No access observed`
+evidence for manual review rather than a deletion recommendation.

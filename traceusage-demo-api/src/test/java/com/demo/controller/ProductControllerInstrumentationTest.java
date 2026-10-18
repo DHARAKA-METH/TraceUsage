@@ -3,10 +3,12 @@ package com.demo.controller;
 import com.traceusage.sdk.config.TraceUsageAutoConfiguration;
 import com.traceusage.sdk.service.TelemetryPublisher;
 import com.traceusage.sdk.telemetry.UsageEvent;
+import com.demo.service.DemoStore;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -20,6 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ProductController.class)
+@Import(DemoStore.class)
 @ImportAutoConfiguration(TraceUsageAutoConfiguration.class)
 @TestPropertySource(properties = {
         "traceusage.enabled=true",
@@ -36,10 +39,11 @@ class ProductControllerInstrumentationTest {
 
     @Test
     void createProduct_shouldPublishPostProductEndpointUsage() throws Exception {
-        mockMvc.perform(post("/api/products"))
+        mockMvc.perform(post("/api/products")
+                        .contentType("application/json")
+                        .content("{\"name\":\"Demo product\",\"price\":1000,\"stock\":2}"))
                 .andExpect(status().isCreated())
-                .andExpect(result -> org.assertj.core.api.Assertions.assertThat(result.getResponse().getContentAsString())
-                        .isEqualTo("Product created"));
+                .andExpect(jsonPath("$.name").value("Demo product"));
 
         verify(publisher).publish(argThat(event ->
                 event.method().equals("POST")
@@ -49,16 +53,16 @@ class ProductControllerInstrumentationTest {
 
     @Test
     void getProduct_withDifferentIds_shouldPublishNormalizedEndpointPattern() throws Exception {
-        mockMvc.perform(get("/api/products/10"))
+        mockMvc.perform(get("/api/products/101"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(10))
+                .andExpect(jsonPath("$.id").value(101))
                 .andExpect(jsonPath("$.name").value("Laptop"))
                 .andExpect(jsonPath("$.price").value(250000))
                 .andExpect(jsonPath("$.legacyCode").value("LAP-001"));
 
-        mockMvc.perform(get("/api/products/20"))
+        mockMvc.perform(get("/api/products/102"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(20));
+                .andExpect(jsonPath("$.id").value(102));
 
         verify(publisher, times(2)).publish(argThat(this::isNormalizedGetProductEvent));
     }

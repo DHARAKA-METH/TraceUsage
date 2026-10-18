@@ -1,0 +1,103 @@
+openapi: 3.0.3
+info:
+  title: TraceUsage Shop Demo API
+  version: 1.0.0
+  description: A deterministic in-memory API used to demonstrate TraceUsage endpoint and browser field telemetry.
+servers:
+  - url: http://localhost:8081
+paths:
+  /api/products:
+    get:
+      summary: List products
+      responses: { '200': { description: Catalog, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ProductSummary' } } } } } }
+    post:
+      summary: Create product
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CreateProductRequest' } } } }
+      responses: { '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Product' } } } }, '400': { $ref: '#/components/responses/BadRequest' } }
+  /api/products/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: integer, format: int64 } }]
+    get:
+      summary: Get product
+      responses: { '200': { description: Product, content: { application/json: { schema: { $ref: '#/components/schemas/Product' } } } }, '404': { $ref: '#/components/responses/NotFound' } }
+    patch:
+      summary: Update product
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/UpdateProductRequest' } } } }
+      responses: { '200': { description: Product, content: { application/json: { schema: { $ref: '#/components/schemas/Product' } } } }, '404': { $ref: '#/components/responses/NotFound' } }
+    delete:
+      summary: Delete product
+      responses: { '204': { description: Deleted }, '404': { $ref: '#/components/responses/NotFound' } }
+  /api/products/{id}/reviews:
+    get:
+      summary: List product reviews
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { '200': { description: Reviews, content: { application/json: { schema: { $ref: '#/components/schemas/ReviewsResponse' } } } } }
+  /api/categories:
+    get:
+      summary: List categories
+      responses: { '200': { description: Categories, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Category' } } } } } }
+  /api/categories/{id}:
+    get:
+      summary: Get category
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { '200': { description: Category, content: { application/json: { schema: { $ref: '#/components/schemas/Category' } } } }, '404': { $ref: '#/components/responses/NotFound' } }
+  /api/categories/{id}/products:
+    get:
+      summary: List products in a category
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { '200': { description: Products, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ProductSummary' } } } } } }
+  /api/orders:
+    post:
+      summary: Place order
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CreateOrderRequest' } } } }
+      responses: { '201': { description: Order, content: { application/json: { schema: { $ref: '#/components/schemas/Order' } } } } }
+  /api/orders/{id}:
+    get:
+      summary: Get order
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: Order, content: { application/json: { schema: { $ref: '#/components/schemas/Order' } } } } }
+  /api/demo/errors/400:
+    get: { summary: Intentional client error, responses: { '400': { $ref: '#/components/responses/BadRequest' } } }
+  /api/demo/errors/500:
+    get: { summary: Intentional server error, responses: { '500': { $ref: '#/components/responses/ServerError' } } }
+components:
+  responses:
+    BadRequest: { description: Invalid request, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    NotFound: { description: Resource not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    ServerError: { description: Intentional server error, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  schemas:
+    Product:
+      type: object
+      required: [id, name, price, currency, description, imageUrl, stock, legacyCode, supplier, specifications]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        price: { type: integer }
+        currency: { type: string }
+        description: { type: string }
+        imageUrl: { type: string }
+        stock: { type: integer }
+        legacyCode: { type: string, deprecated: true }
+        internalCatalogReference: { type: string, deprecated: true }
+        tags: { type: array, items: { type: string } }
+        supplier: { $ref: '#/components/schemas/Supplier' }
+        specifications: { $ref: '#/components/schemas/Specifications' }
+    ProductSummary:
+      type: object
+      properties: { id: { type: integer }, name: { type: string }, price: { type: integer }, currency: { type: string }, imageUrl: { type: string }, stock: { type: integer }, tags: { type: array, items: { type: string } }, supplier: { $ref: '#/components/schemas/Supplier' } }
+    Supplier:
+      type: object
+      properties: { id: { type: integer }, name: { type: string }, country: { type: string }, internalRating: { type: number } }
+    Specifications:
+      type: object
+      properties: { cpu: { type: string }, memoryGb: { type: integer }, storageGb: { type: integer } }
+    Category: { type: object, properties: { id: { type: integer }, name: { type: string }, description: { type: string } } }
+    ReviewsResponse: { type: object, properties: { productId: { type: integer }, reviews: { type: array, items: { $ref: '#/components/schemas/Review' } } } }
+    Review: { type: object, properties: { id: { type: string }, rating: { type: integer }, comment: { type: string }, reviewer: { $ref: '#/components/schemas/Reviewer' } } }
+    Reviewer: { type: object, properties: { name: { type: string }, email: { type: string, format: email } } }
+    Order: { type: object, properties: { id: { type: string }, status: { type: string }, total: { type: integer }, currency: { type: string }, items: { type: array, items: { $ref: '#/components/schemas/OrderItem' } }, shippingAddress: { $ref: '#/components/schemas/ShippingAddress' }, internalFulfilmentNote: { type: string, deprecated: true } } }
+    OrderItem: { type: object, properties: { productId: { type: integer }, productName: { type: string }, quantity: { type: integer }, unitPrice: { type: integer }, lineTotal: { type: integer } } }
+    ShippingAddress: { type: object, properties: { city: { type: string }, country: { type: string }, internalZone: { type: string } } }
+    CreateProductRequest: { type: object, required: [name, price, stock], properties: { name: { type: string }, price: { type: integer }, stock: { type: integer } } }
+    UpdateProductRequest: { type: object, properties: { name: { type: string }, price: { type: integer }, description: { type: string }, stock: { type: integer } } }
+    CreateOrderRequest: { type: object, required: [items], properties: { items: { type: array, items: { type: object, required: [productId, quantity], properties: { productId: { type: integer }, quantity: { type: integer } } } } } }
+    Error: { type: object, properties: { status: { type: integer }, message: { type: string } } }
