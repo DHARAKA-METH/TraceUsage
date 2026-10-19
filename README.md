@@ -4,7 +4,6 @@
 
 **TraceUsage** is a developer-focused monitoring and analytics platform that helps teams understand how their REST APIs are used. It tracks endpoint traffic and response-field access in instrumented applications, then presents the results in a dashboard to help identify **potentially unused endpoints and fields**.
 
-> **Usage evidence, not automatic deletion advice.** An endpoint or field with no observed usage may still be required by an unmonitored client, background job, or infrequent workflow.
 
 ## The Problem
 
@@ -44,53 +43,10 @@ A full-stack API monitoring application built with **Spring Boot, Next.js, TypeS
 | Docker Compose | Runs the platform and local supporting services |
 
 
-## Screenshots
-
-> **Dashboard screenshot placeholder**
->
-> Add an image at `docs/images/dashboard-overview.png`, then replace this block with:
-> `![TraceUsage dashboard](docs/images/dashboard-overview.png)`
-
-> **Field analytics screenshot placeholder**
->
-> Add an image at `docs/images/field-analytics.png`.
-
-> **Lifecycle screenshot placeholder**
->
-> Add an image at `docs/images/lifecycle.png`.
-
 ## Architecture
 
-> **Architecture diagram placeholder**
->
-> Add the final diagram at `docs/images/architecture.png`, then replace this block with:
-> `![TraceUsage architecture](docs/images/architecture.png)`
+<img width="2362" height="892" alt="TraceUsage_Architecture drawio" src="https://github.com/user-attachments/assets/85e9ba29-2fc6-480b-8f0c-090402a9ab9c" />
 
-```text
-Spring Boot API                          Browser application
-      │                                         │
-      │ tru_sk_ endpoint telemetry              │ tru_pk_ field telemetry
-      └──────────────────┬──────────────────────┘
-                         ▼
-                  Collector API
-                         │
-               direct or Kafka mode
-                         │
-              ┌──────────┴──────────┐
-              ▼                     ▼
-       Endpoint consumer      Field consumer
-              │                     │
-              ▼                     ▼
-   Status-code hourly rows    Field hourly rows
-              └──────────┬──────────┘
-                         ▼
-                 Neon PostgreSQL
-                         │
-              Analytics / Lifecycle API
-                         │
-                         ▼
-                  Next.js dashboard
-```
 
 ## Repository modules
 
@@ -482,7 +438,23 @@ Add your user to the Docker group, sign out and sign back in:
 sudo usermod -aG docker "$USER"
 ```
 
-### Flyway checksum error
+## Screenshots
 
-Do not edit or combine migrations already applied to a shared database. Add a new versioned migration instead. Use a Neon branch or backup before applying schema changes to important data.
+<img width="1384" height="817" alt="1" src="https://github.com/user-attachments/assets/0c7c6c93-e625-46e0-8c7b-3debba73bdaf" />
+
+<img width="1357" height="804" alt="2" src="https://github.com/user-attachments/assets/1147dd37-994e-4f85-b85c-826482e59d1c" />
+
+<img width="914" height="799" alt="3" src="https://github.com/user-attachments/assets/4237b531-4a08-42bf-9464-7954d26d9fce" />
+
+<img width="1069" height="798" alt="4" src="https://github.com/user-attachments/assets/c97447be-e9d4-4343-948c-45d4c0044d57" />
+
+<img width="1094" height="803" alt="5" src="https://github.com/user-attachments/assets/75b3c967-b2f1-4a8e-803b-f77dd69bea4e" />
+
+
+
+
+
+
+
+
 
