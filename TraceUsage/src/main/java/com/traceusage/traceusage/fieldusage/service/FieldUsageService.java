@@ -1,6 +1,8 @@
 package com.traceusage.traceusage.fieldusage.service;
 
 import com.traceusage.traceusage.application.entity.Application;
+import com.traceusage.traceusage.apikey.entity.ApiKey;
+import com.traceusage.traceusage.environment.entity.Environment;
 import com.traceusage.traceusage.fieldusage.dto.FieldUsageBatchRequest;
 import com.traceusage.traceusage.messaging.config.IngestionProperties;
 import com.traceusage.traceusage.messaging.dto.FieldTelemetryBatchMessage;
@@ -30,22 +32,26 @@ public class FieldUsageService {
     }
 
     public void collectBatch(String publicIngestKey, FieldUsageBatchRequest request) {
-        Application application = authenticationService.authenticate(publicIngestKey);
+        ApiKey key = authenticationService.authenticateKey(publicIngestKey);
+        Application application = key.getApplication();
+        Environment environment = key.getEnvironment();
+        if (environment == null) throw new IllegalStateException("Public ingest key has no environment binding");
         System.out.println("AUTHENTICATED -> applicationId=" + application.getId()
                 + " projectId=" + application.getProjectId());
 
         if (ingestionProperties.isKafkaMode()) {
-            publishBatch(application, request);
+            publishBatch(application, environment, request);
             return;
         }
 
-        persistenceService.saveIfNew(application, request);
+        persistenceService.saveIfNew(application, environment, request);
     }
 
-    private void publishBatch(Application application, FieldUsageBatchRequest request) {
+    private void publishBatch(Application application, Environment environment, FieldUsageBatchRequest request) {
         FieldTelemetryBatchMessage message = FieldTelemetryBatchMessage.create(
                 request.batchId(),
                 application.getId(),
+                environment.getId(),
                 request.projectId(),
                 request.clientId().trim(),
                 request.clientVersion().trim(),

@@ -20,6 +20,12 @@ function tooltipStyle() {
 }
 
 export function EndpointCharts({ endpoints }: { endpoints: EndpointAnalyticsItem[] }) {
+  const statusTotals = new Map<string, number>();
+  endpoints.forEach(endpoint => Object.entries(endpoint.statusCounts ?? {}).forEach(([status, count]) => {
+    statusTotals.set(status, (statusTotals.get(status) ?? 0) + count);
+  }));
+  const statusData = [...statusTotals].sort(([a], [b]) => Number(a) - Number(b))
+    .map(([status, requests]) => ({ status, requests }));
   const ranked = [...endpoints]
     .sort((a, b) => b.totalRequests - a.totalRequests)
     .slice(0, 10)
@@ -39,6 +45,24 @@ export function EndpointCharts({ endpoints }: { endpoints: EndpointAnalyticsItem
 
   return (
     <section className="chart-grid">
+      <ChartCard title="HTTP status codes" description="Exact status counts across all routes in the selected environment and time window.">
+        {statusData.length === 0 ? <p>No status-code breakdown available.</p> : <>
+          <div className="chart-canvas">
+            <ResponsiveContainer height="100%" width="100%">
+              <BarChart data={statusData}>
+                <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
+                <XAxis dataKey="status" tick={{ fill: "var(--chart-axis)" }} />
+                <YAxis allowDecimals={false} tick={{ fill: "var(--chart-axis)" }} />
+                <Tooltip contentStyle={tooltipStyle()} />
+                <Bar dataKey="requests" name="Requests" radius={[6, 6, 0, 0]}>
+                  {statusData.map(item => <Cell key={item.status} fill={Number(item.status) >= 500 ? COLORS.error : Number(item.status) >= 400 ? "#fbbf24" : COLORS.success} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <p className="muted">{statusData.map(item => `${item.status}: ${item.requests.toLocaleString()}`).join(" · ")}</p>
+        </>}
+      </ChartCard>
       <ChartCard title="Top endpoint traffic" description="Top 10 normalized routes by requests in the selected time window.">
         <div className="chart-canvas chart-canvas-tall">
           <ResponsiveContainer height="100%" width="100%">

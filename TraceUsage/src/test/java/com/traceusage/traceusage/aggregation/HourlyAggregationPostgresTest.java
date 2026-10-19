@@ -115,13 +115,13 @@ class HourlyAggregationPostgresTest {
                     Long applicationId = invocation.getArgument(0);
                     String method = invocation.getArgument(1);
                     String path = invocation.getArgument(2);
-                    Long id = jdbcTemplate.queryForObject("""
+                    List<Long> existing = jdbcTemplate.query("select id from api_endpoints where application_id = ? and http_method = ? and endpoint_path = ?",
+                            (rs, row) -> rs.getLong(1), applicationId, method, path);
+                    Long id = existing.isEmpty() ? jdbcTemplate.queryForObject("""
                             insert into api_endpoints (application_id, http_method, endpoint_path)
                             values (?, ?, ?)
-                            on conflict (application_id, http_method, endpoint_path)
-                            do update set endpoint_path = excluded.endpoint_path
                             returning id
-                            """, Long.class, applicationId, method, path);
+                            """, Long.class, applicationId, method, path) : existing.get(0);
                     return Optional.of(endpointWithId(id));
                 });
         return repository;
@@ -136,7 +136,9 @@ class HourlyAggregationPostgresTest {
         jdbcTemplate.update("delete from usage_events");
         jdbcTemplate.update("delete from field_usage_events");
         jdbcTemplate.update("delete from observed_fields");
+        jdbcTemplate.update("delete from api_fields");
         jdbcTemplate.update("delete from api_endpoints");
+        jdbcTemplate.update("delete from environments");
         jdbcTemplate.update("delete from applications");
         jdbcTemplate.update("delete from users");
     }
@@ -155,7 +157,9 @@ class HourlyAggregationPostgresTest {
         }
 
         List<AggregateRow> rows = jdbcTemplate.query("""
-                select hour_bucket, request_count, success_count, error_count, first_seen, last_seen
+                select hour_bucket, request_count,
+                case when status_code between 200 and 399 then request_count else 0 end as success_count,
+                case when status_code >= 400 then request_count else 0 end as error_count, first_seen, last_seen
                 from endpoint_usage_hourly
                 where endpoint_id = ?
                 """, (rs, rowNum) -> new AggregateRow(
@@ -469,6 +473,29 @@ class HourlyAggregationPostgresTest {
         return repository;
     }
 
+    @Test
+    void shouldFilterStatusBucketsByEnvironmentAndRejectForeignEnvironment() {
+        long app = seedApplication("proj_analytics", "analytics", "development");
+        Long dev = jdbcTemplate.queryForObject("insert into environments(application_id, name) values (?, 'development') returning id", Long.class, app);
+        Long prod = jdbcTemplate.queryForObject("insert into environments(application_id, name) values (?, 'production') returning id", Long.class, app);
+        ApiEndpoint devEndpoint = seedEndpoint(app, "GET", "/api/orders");
+        jdbcTemplate.update("update api_endpoints set environment_id = ? where id = ?", dev, devEndpoint.getId());
+        ApiEndpoint prodEndpoint = endpointWithId(jdbcTemplate.queryForObject(
+                "insert into api_endpoints(application_id, environment_id, http_method, endpoint_path) values (?, ?, 'GET', '/api/orders') returning id",
+                Long.class, app, prod));
+        Instant at = Instant.parse("2026-10-14T10:30:00Z");
+        endpointService.aggregateIfNew(devEndpoint, usageEvent(app, 200, at));
+        endpointService.aggregateIfNew(prodEndpoint, usageEvent(app, 500, at));
+        var service = new AnalyticsServiceImpl(applicationRepositoryReturning(app), jdbcTemplate);
+        var result = service.getEndpointAnalytics(1L, "proj_analytics", Instant.EPOCH, at.plusSeconds(60), prod);
+        assertThat(result.environment()).isEqualTo("production");
+        assertThat(result.endpoints()).hasSize(1);
+        assertThat(result.endpoints().get(0).failureCount()).isEqualTo(1);
+        assertThat(result.endpoints().get(0).successCount()).isZero();
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.getEndpointAnalytics(1L, "proj_analytics", Instant.EPOCH, at, -1L))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+    }
+
     private ApiEndpoint lifecycleEndpoint(long applicationId, long endpointId, String method, String path) {
         ApiEndpoint endpoint = mock(ApiEndpoint.class);
         Application application = applicationWithId(applicationId);
@@ -582,9 +609,13 @@ class HourlyAggregationPostgresTest {
 
     private List<AggregateRow> aggregateRows(long endpointId) {
         return jdbcTemplate.query("""
-                select hour_bucket, request_count, success_count, error_count, first_seen, last_seen
+                select hour_bucket, sum(request_count) as request_count,
+                coalesce(sum(request_count) filter(where status_code between 200 and 399), 0) as success_count,
+                coalesce(sum(request_count) filter(where status_code >= 400), 0) as error_count,
+                min(first_seen) as first_seen, max(last_seen) as last_seen
                 from endpoint_usage_hourly
                 where endpoint_id = ?
+                group by hour_bucket
                 order by hour_bucket
                 """, (rs, rowNum) -> new AggregateRow(
                         rs.getTimestamp("hour_bucket").toInstant(),

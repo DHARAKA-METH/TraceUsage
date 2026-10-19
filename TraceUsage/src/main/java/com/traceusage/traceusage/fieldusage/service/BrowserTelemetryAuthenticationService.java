@@ -26,6 +26,10 @@ public class BrowserTelemetryAuthenticationService {
     }
 
     public Application authenticate(String rawPublicKey) {
+        return authenticateKey(rawPublicKey).getApplication();
+    }
+
+    public ApiKey authenticateKey(String rawPublicKey) {
         if (rawPublicKey == null || rawPublicKey.isBlank()) {
             System.out.println("REJECTED -> X-TraceUsage-Public-Key header is missing");
             throw new InvalidApiKeyException("Invalid public ingest key");
@@ -45,8 +49,8 @@ public class BrowserTelemetryAuthenticationService {
             throw new InvalidApiKeyException("Invalid public ingest key");
         }
 
-        Application application = matchedKey.get().getApplication();
-        System.out.println("AUTH OK -> applicationId=" + application.getId());
-        return application;
+        ApiKey apiKey = matchedKey.get();
+        System.out.println("AUTH OK -> applicationId=" + apiKey.getApplication().getId());
+        return apiKey;
     }
 }

@@ -41,9 +41,14 @@ public class EndpointLifecycleService {
     }
 
     public List<EndpointLifecycleResponse> getAllEndpointLifecycles(Application application) {
+        return getAllEndpointLifecycles(application, null);
+    }
+
+    public List<EndpointLifecycleResponse> getAllEndpointLifecycles(Application application, Long environmentId) {
         return endpointRepository
                 .findAllByApplicationIdOrderByEndpointPathAscHttpMethodAsc(application.getId())
                 .stream()
+                .filter(endpoint -> environmentId == null || (endpoint.getEnvironment() != null && environmentId.equals(endpoint.getEnvironment().getId())))
                 .map(endpoint -> evaluate(application, endpoint))
                 .toList();
     }
@@ -61,6 +66,11 @@ public class EndpointLifecycleService {
         int thresholdDays = application.getInactivityThresholdDays() == null
                 ? 90
                 : application.getInactivityThresholdDays();
+        Instant monitoringStartedAt = application.getMonitoringStartedAt();
+        if (endpoint.getEnvironment() != null) {
+            thresholdDays = endpoint.getEnvironment().getInactivityThresholdDays();
+            monitoringStartedAt = endpoint.getEnvironment().getMonitoringStartedAt();
+        }
 
         EndpointDeprecation deprecation = deprecationRepository
                 .findByEndpointId(endpoint.getId())
@@ -68,15 +78,15 @@ public class EndpointLifecycleService {
 
         Instant lastSeen = endpoint.getLastSeenAt();
 
-        boolean monitoringCoverageSufficient = coversFullThresholdWindow(
-                application, now, thresholdDays);
+        boolean monitoringCoverageSufficient = monitoringStartedAt != null
+                && ChronoUnit.DAYS.between(monitoringStartedAt, now) >= thresholdDays;
 
         KnownClientActivity clientActivity = knownClientAnalyzer.analyze(
                 endpoint,
                 now.minus(thresholdDays, ChronoUnit.DAYS));
 
         LifecycleEvaluationInput input = new LifecycleEvaluationInput(
-                application.getMonitoringStartedAt(),
+                monitoringStartedAt,
                 lastSeen,
                 thresholdDays,
                 deprecation != null,
@@ -94,7 +104,7 @@ public class EndpointLifecycleService {
                 endpoint.getRequestCount(),
                 endpoint.getFirstSeenAt(),
                 lastSeen,
-                application.getMonitoringStartedAt(),
+                monitoringStartedAt,
                 thresholdDays,
                 deprecation != null,
                 deprecation == null ? null : deprecation.getDeprecatedAt(),

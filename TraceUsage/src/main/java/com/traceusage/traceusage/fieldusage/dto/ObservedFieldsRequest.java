@@ -12,5 +12,5 @@ public record ObservedFieldsRequest(
         @NotBlank @Size(max = 500) String endpoint,
         @Size(max = 150) String schema,
         @Size(max = 500) List<@NotBlank @Size(max = 500) String> observedFields,
-        @NotEmpty @Size(max = 500) List<@Valid AccessedFieldRequest> fields) {
+        @jakarta.validation.constraints.NotNull @Size(max = 500) List<@Valid AccessedFieldRequest> fields) {
 }

@@ -14,6 +14,7 @@ public interface ObservedFieldRepository extends JpaRepository<ObservedField, Lo
     @Query(value = """
             insert into observed_fields (
                 application_id,
+                environment_id,
                 http_method,
                 endpoint,
                 schema_name,
@@ -22,6 +23,7 @@ public interface ObservedFieldRepository extends JpaRepository<ObservedField, Lo
                 last_seen
             ) values (
                 :applicationId,
+                :environmentId,
                 :httpMethod,
                 :endpoint,
                 :schemaName,
@@ -33,6 +35,7 @@ public interface ObservedFieldRepository extends JpaRepository<ObservedField, Lo
             do update set last_seen = excluded.last_seen
             """, nativeQuery = true)
     void upsertObservedField(@Param("applicationId") Long applicationId,
+                             @Param("environmentId") Long environmentId,
                              @Param("httpMethod") String httpMethod,
                              @Param("endpoint") String endpoint,
                              @Param("schemaName") String schemaName,

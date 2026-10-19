@@ -8,6 +8,7 @@ public record FieldTelemetryBatchMessage(
         int schemaVersion,
         UUID batchId,
         Long applicationId,
+        Long environmentId,
         String projectId,
         String clientId,
         String clientVersion,
@@ -30,7 +31,8 @@ public record FieldTelemetryBatchMessage(
     }
 
     public static FieldTelemetryBatchMessage create(UUID batchId,
-                                                    Long applicationId,
+                                                     Long applicationId,
+                                                     Long environmentId,
                                                     String projectId,
                                                     String clientId,
                                                     String clientVersion,
@@ -40,6 +42,7 @@ public record FieldTelemetryBatchMessage(
                 CURRENT_SCHEMA_VERSION,
                 batchId,
                 applicationId,
+                environmentId,
                 projectId,
                 clientId,
                 clientVersion,

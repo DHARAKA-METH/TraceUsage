@@ -3,6 +3,8 @@ package com.traceusage.traceusage.fieldusage.service;
 import com.traceusage.traceusage.application.entity.Application;
 import com.traceusage.traceusage.application.exception.ApplicationNotFoundException;
 import com.traceusage.traceusage.application.repository.ApplicationRepository;
+import com.traceusage.traceusage.environment.entity.Environment;
+import com.traceusage.traceusage.environment.repository.EnvironmentRepository;
 import com.traceusage.traceusage.aggregation.FieldUsageAggregationService;
 import com.traceusage.traceusage.fieldusage.dto.AccessedFieldRequest;
 import com.traceusage.traceusage.fieldusage.dto.FieldUsageBatchRequest;
@@ -29,22 +31,30 @@ public class FieldUsagePersistenceService {
     private final FieldUsageRepository fieldUsageRepository;
     private final ProcessedFieldUsageBatchRepository processedBatchRepository;
     private final ApplicationRepository applicationRepository;
+    private final EnvironmentRepository environmentRepository;
     private final FieldUsageAggregationService aggregationService;
 
     public FieldUsagePersistenceService(ObservedFieldRepository observedFieldRepository,
                                         FieldUsageRepository fieldUsageRepository,
-                                        ProcessedFieldUsageBatchRepository processedBatchRepository,
-                                        ApplicationRepository applicationRepository,
+                                         ProcessedFieldUsageBatchRepository processedBatchRepository,
+                                         ApplicationRepository applicationRepository,
+                                         EnvironmentRepository environmentRepository,
                                         FieldUsageAggregationService aggregationService) {
         this.observedFieldRepository = observedFieldRepository;
         this.fieldUsageRepository = fieldUsageRepository;
         this.processedBatchRepository = processedBatchRepository;
         this.applicationRepository = applicationRepository;
+        this.environmentRepository = environmentRepository;
         this.aggregationService = aggregationService;
     }
 
     @Transactional
     public void saveIfNew(Application application, FieldUsageBatchRequest request) {
+        saveIfNew(application, defaultEnvironment(application), request);
+    }
+
+    @Transactional
+    public void saveIfNew(Application application, Environment environment, FieldUsageBatchRequest request) {
         if (processedBatchRepository.existsByBatchId(request.batchId())) {
             System.out.println("BATCH ALREADY PROCESSED -> skipping batchId=" + request.batchId());
             return;
@@ -54,13 +64,13 @@ public class FieldUsagePersistenceService {
             processedBatchRepository.save(ProcessedFieldUsageBatch.create(request.batchId(), application));
             System.out.println("SAVED -> processed_field_usage_batches batchId=" + request.batchId());
 
-            int observedCount = saveObservedFields(application, request);
+            int observedCount = saveObservedFields(application, environment, request);
             System.out.println("SAVED -> observed_fields rows=" + observedCount);
 
-            int usageCount = saveFieldUsageEvents(application, request);
+            int usageCount = saveFieldUsageEvents(application, environment, request);
             System.out.println("SAVED -> field_usage_events rows=" + usageCount);
 
-            boolean aggregateUpdated = aggregationService.aggregateBatchIfNew(application, request);
+            boolean aggregateUpdated = aggregationService.aggregateBatchIfNew(application, environment, request);
             System.out.println("SAVED -> field_usage_hourly aggregateUpdated=" + aggregateUpdated);
         } catch (DataIntegrityViolationException exception) {
             if (processedBatchRepository.existsByBatchId(request.batchId())) {
@@ -80,11 +90,16 @@ public class FieldUsagePersistenceService {
 
         Application application = applicationRepository.findById(message.applicationId())
                 .orElseThrow(ApplicationNotFoundException::new);
+        Environment environment = message.environmentId() == null
+                ? defaultEnvironment(application)
+                : environmentRepository.findById(message.environmentId())
+                .filter(candidate -> candidate.getApplication().getId().equals(application.getId()))
+                .orElseThrow(() -> new IllegalArgumentException("Field telemetry environment does not belong to application"));
 
-        saveIfNew(application, toRequest(message));
+        saveIfNew(application, environment, toRequest(message));
     }
 
-    private int saveObservedFields(Application application, FieldUsageBatchRequest request) {
+    private int saveObservedFields(Application application, Environment environment, FieldUsageBatchRequest request) {
         Instant seenAt = request.observedAt();
         int saved = 0;
         for (ObservedFieldsRequest response : request.responses()) {
@@ -102,6 +117,7 @@ public class FieldUsagePersistenceService {
                     .toList()) {
                 observedFieldRepository.upsertObservedField(
                         application.getId(),
+                        environment.getId(),
                         httpMethod,
                         endpoint,
                         schemaName,
@@ -114,7 +130,7 @@ public class FieldUsagePersistenceService {
         return saved;
     }
 
-    private int saveFieldUsageEvents(Application application, FieldUsageBatchRequest request) {
+    private int saveFieldUsageEvents(Application application, Environment environment, FieldUsageBatchRequest request) {
         List<FieldUsageEvent> events = new ArrayList<>();
 
         for (ObservedFieldsRequest response : request.responses()) {
@@ -124,7 +140,7 @@ public class FieldUsagePersistenceService {
 
             for (AccessedFieldRequest field : response.fields()) {
                 events.add(FieldUsageEvent.create(
-                        application,
+                        application, environment,
                         request.batchId(),
                         httpMethod,
                         endpoint,
@@ -175,5 +191,10 @@ public class FieldUsagePersistenceService {
 
     private String normalizeSchema(String schema) {
         return schema == null || schema.isBlank() ? "" : schema.trim();
+    }
+
+    private Environment defaultEnvironment(Application application) {
+        return environmentRepository.findByApplicationIdAndName(application.getId(), application.getEnvironment())
+                .orElseThrow(() -> new IllegalStateException("Application has no default environment"));
     }
 }

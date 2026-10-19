@@ -1,6 +1,7 @@
 package com.traceusage.traceusage.fieldusage.entity;
 
 import com.traceusage.traceusage.application.entity.Application;
+import com.traceusage.traceusage.environment.entity.Environment;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -31,6 +32,10 @@ public class FieldUsageEvent {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "application_id", nullable = false)
     private Application application;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "environment_id")
+    private Environment environment;
 
     @Column(name = "batch_id", nullable = false)
     private UUID batchId;
@@ -84,6 +89,15 @@ public class FieldUsageEvent {
         event.accessCount = Objects.requireNonNull(accessCount);
         event.observedAt = Objects.requireNonNull(observedAt);
         event.createdAt = Instant.now();
+        return event;
+    }
+
+    public static FieldUsageEvent create(Application application, Environment environment, UUID batchId,
+                                         String httpMethod, String endpoint, String schemaName, String fieldPath,
+                                         String clientId, String clientVersion, Integer accessCount, Instant observedAt) {
+        FieldUsageEvent event = create(application, batchId, httpMethod, endpoint, schemaName, fieldPath,
+                clientId, clientVersion, accessCount, observedAt);
+        event.environment = Objects.requireNonNull(environment);
         return event;
     }
 }

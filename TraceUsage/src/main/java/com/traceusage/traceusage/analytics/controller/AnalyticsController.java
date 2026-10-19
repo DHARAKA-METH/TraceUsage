@@ -28,6 +28,7 @@ public class AnalyticsController {
 
     @GetMapping("/endpoints")
     public ApiResponse<EndpointAnalyticsResponse> getEndpointAnalytics(
+            @RequestParam(required = false) Long environmentId,
             @AuthenticationPrincipal AuthenticatedUser currentUser,
             @PathVariable String projectId,
             @RequestParam(required = false)
@@ -40,13 +41,14 @@ public class AnalyticsController {
                 currentUser.id(),
                 projectId,
                 from,
-                to);
+                to, environmentId);
 
         return ApiResponse.success("Endpoint analytics retrieved successfully", response);
     }
 
     @GetMapping("/fields")
     public ApiResponse<FieldAnalyticsResponse> getFieldAnalytics(
+            @RequestParam(required = false) Long environmentId,
             @AuthenticationPrincipal AuthenticatedUser currentUser,
             @PathVariable String projectId,
             @RequestParam(required = false) String endpoint,
@@ -65,13 +67,14 @@ public class AnalyticsController {
                 clientId,
                 clientVersion,
                 from,
-                to);
+                to, environmentId);
 
         return ApiResponse.success("Field analytics retrieved successfully", response);
     }
 
     @GetMapping("/schema-fields")
     public ApiResponse<SchemaFieldAnalyticsResponse> getSchemaFieldAnalytics(
+            @RequestParam(required = false) Long environmentId,
             @AuthenticationPrincipal AuthenticatedUser currentUser,
             @PathVariable String projectId,
             @RequestParam(required = false) String endpoint,
@@ -86,7 +89,7 @@ public class AnalyticsController {
                 projectId,
                 endpoint,
                 from,
-                to);
+                to, environmentId);
 
         return ApiResponse.success("Schema field analytics retrieved successfully", response);
     }

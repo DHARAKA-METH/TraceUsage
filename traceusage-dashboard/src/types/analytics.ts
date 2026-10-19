@@ -4,6 +4,7 @@ export type EndpointAnalyticsItem = {
   totalRequests: number;
   successCount: number;
   failureCount: number;
+  statusCounts?: Record<string, number>;
   lastSeen: string | null;
 };
 

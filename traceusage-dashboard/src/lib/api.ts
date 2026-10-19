@@ -10,6 +10,14 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   const { auth = true, headers, ...requestOptions } = options;
   const token = auth ? getToken() : null;
   const isFormData = requestOptions.body instanceof FormData;
+  if (typeof window !== "undefined" && /^\/api\/v1\/applications\/[^/]+\/(analytics|endpoints)(\/|\?)/.test(path)) {
+    const selected = new URLSearchParams(window.location.search).get("environmentId");
+    if (selected) {
+      const url = new URL(path, API_URL);
+      url.searchParams.set("environmentId", selected);
+      path = url.pathname + url.search;
+    }
+  }
 
   const response = await fetch(`${API_URL}${path}`, {
     ...requestOptions,

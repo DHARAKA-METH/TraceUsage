@@ -76,8 +76,8 @@ public class TelemetryRetentionService {
         }
 
         int aggregateRows = deleteBatched(
-                "delete from endpoint_usage_hourly where (endpoint_id, hour_bucket) in ("
-                        + "  select endpoint_id, hour_bucket from endpoint_usage_hourly"
+                "delete from endpoint_usage_hourly where (endpoint_id, hour_bucket, status_code) in ("
+                        + "  select endpoint_id, hour_bucket, status_code from endpoint_usage_hourly"
                         + "  where hour_bucket < ? order by hour_bucket limit ?)",
                 aggregateCutoff(now), properties.getDeleteBatchLimit());
 

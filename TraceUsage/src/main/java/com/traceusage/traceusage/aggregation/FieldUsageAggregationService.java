@@ -69,6 +69,11 @@ public class FieldUsageAggregationService {
      */
     @Transactional
     public boolean aggregateBatchIfNew(Application application, FieldUsageBatchRequest request) {
+        return aggregateBatchIfNew(application, null, request);
+    }
+
+    @Transactional
+    public boolean aggregateBatchIfNew(Application application, com.traceusage.traceusage.environment.entity.Environment environment, FieldUsageBatchRequest request) {
         int accepted = jdbcTemplate.update("""
                 insert into processed_field_aggregation_batches (batch_id, application_id)
                 values (?, ?)
@@ -81,6 +86,7 @@ public class FieldUsageAggregationService {
         }
 
         Map<FieldAggregateKey, Long> aggregates = new LinkedHashMap<>();
+        Map<FieldAggregateKey, Long> observations = new LinkedHashMap<>();
         Instant observedAt = request.observedAt();
         Instant hourBucket = TimeBucket.hour(observedAt);
         String clientId = request.clientId().trim();
@@ -92,12 +98,20 @@ public class FieldUsageAggregationService {
             String schemaName = response.schema() == null || response.schema().isBlank()
                     ? ""
                     : response.schema().trim();
-            ApiEndpoint endpoint = endpointRepository
+            ApiEndpoint endpoint = environment == null ? endpointRepository
                     .findByApplicationIdAndHttpMethodAndEndpointPath(
                             application.getId(), method, endpointPath)
                     .orElseGet(() -> endpointRepository.save(ApiEndpoint.register(
-                            application, method, endpointPath)));
+                            application, method, endpointPath))) : endpointRepository
+                    .findByEnvironmentIdAndHttpMethodAndEndpointPath(environment.getId(), method, endpointPath)
+                    .orElseGet(() -> endpointRepository.save(ApiEndpoint.register(application, environment, method, endpointPath)));
 
+            if (response.observedFields() != null) response.observedFields().stream().map(String::trim).distinct().forEach(path -> {
+                FieldAggregateKey key = new FieldAggregateKey(application.getId(), endpoint.getId(), method, endpointPath,
+                        schemaName, path, clientId, clientVersion, hourBucket, observedAt);
+                observations.merge(key, 1L, Long::sum);
+                aggregates.putIfAbsent(key, 0L);
+            });
             response.fields().forEach(field -> {
                 FieldAggregateKey key = new FieldAggregateKey(
                         application.getId(),
@@ -114,7 +128,7 @@ public class FieldUsageAggregationService {
             });
         });
 
-        aggregates.forEach(this::upsertAggregate);
+        aggregates.forEach((key, count) -> upsertAggregate(key, count, observations.getOrDefault(key, 0L)));
 
         long totalAccesses = aggregates.values().stream().mapToLong(Long::longValue).sum();
         if (accessCounter != null) {
@@ -124,8 +138,16 @@ public class FieldUsageAggregationService {
         return true;
     }
 
-    private void upsertAggregate(FieldAggregateKey key, Long accessCount) {
+    private void upsertAggregate(FieldAggregateKey key, Long accessCount, Long observedCount) {
         Timestamp seenAt = Timestamp.from(key.observedAt());
+        Long fieldId = jdbcTemplate.queryForObject("""
+                insert into api_fields(endpoint_id, schema_name, field_path, first_seen_at, last_seen_at)
+                values (?, ?, ?, ?, ?)
+                on conflict(endpoint_id, schema_name, field_path) do update set
+                first_seen_at = least(api_fields.first_seen_at, excluded.first_seen_at),
+                last_seen_at = greatest(api_fields.last_seen_at, excluded.last_seen_at)
+                returning id
+                """, Long.class, key.endpointId(), key.schemaName(), key.fieldPath(), seenAt, seenAt);
         jdbcTemplate.update("""
                 insert into field_usage_hourly (
                     application_id,
@@ -139,8 +161,8 @@ public class FieldUsageAggregationService {
                     hour_bucket,
                     access_count,
                     first_seen,
-                    last_seen
-                ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    last_seen, field_id, observed_count, last_accessed
+                ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 on conflict (
                     application_id,
                     endpoint_id,
@@ -151,6 +173,9 @@ public class FieldUsageAggregationService {
                     hour_bucket
                 ) do update set
                     access_count = field_usage_hourly.access_count + excluded.access_count,
+                    field_id = excluded.field_id,
+                    observed_count = field_usage_hourly.observed_count + excluded.observed_count,
+                    last_accessed = greatest(field_usage_hourly.last_accessed, excluded.last_accessed),
                     first_seen = least(field_usage_hourly.first_seen, excluded.first_seen),
                     last_seen = greatest(field_usage_hourly.last_seen, excluded.last_seen)
                 """,
@@ -165,7 +190,7 @@ public class FieldUsageAggregationService {
                 Timestamp.from(key.hourBucket()),
                 accessCount,
                 seenAt,
-                seenAt);
+                seenAt, fieldId, observedCount, accessCount > 0 ? seenAt : null);
     }
 
     private record FieldAggregateKey(

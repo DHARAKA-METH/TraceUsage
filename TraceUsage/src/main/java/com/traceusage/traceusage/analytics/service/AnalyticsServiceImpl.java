@@ -35,7 +35,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     public EndpointAnalyticsResponse getEndpointAnalytics(Long ownerId,
                                                           String projectId,
                                                           Instant from,
-                                                          Instant to) {
+                                                          Instant to, Long environmentId) {
         Instant effectiveFrom = from == null ? Instant.EPOCH : from;
         Instant effectiveTo = to == null ? Instant.now() : to;
 
@@ -43,32 +43,45 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 .findByProjectIdAndOwnerId(projectId, ownerId)
                 .orElseThrow(ApplicationNotFoundException::new);
 
+        String environmentName = validateEnvironment(application, environmentId);
         List<EndpointAnalyticsItem> endpoints = queryEndpointAnalytics(
-                application.getId(),
+                application.getId(), environmentId,
                 effectiveFrom,
                 effectiveTo);
 
         return new EndpointAnalyticsResponse(
                 application.getProjectId(),
                 application.getName(),
-                application.getEnvironment(),
+                environmentName,
                 endpoints);
     }
 
-    private List<EndpointAnalyticsItem> queryEndpointAnalytics(Long applicationId,
+    private List<EndpointAnalyticsItem> queryEndpointAnalytics(Long applicationId, Long environmentId,
                                                               Instant from,
                                                               Instant to) {
+        java.util.Map<String, java.util.Map<Integer, Long>> statuses = new java.util.HashMap<>();
+        jdbcTemplate.query("""
+                select ae.http_method, ae.endpoint_path, h.status_code, sum(h.request_count) as requests
+                from endpoint_usage_hourly h join api_endpoints ae on ae.id = h.endpoint_id
+                where ae.application_id = ? and (?::bigint is null or ae.environment_id = ?)
+                  and h.last_seen >= ? and h.first_seen <= ?
+                group by ae.http_method, ae.endpoint_path, h.status_code
+                """, (org.springframework.jdbc.core.RowCallbackHandler) rs -> {
+            statuses.computeIfAbsent(rs.getString("http_method") + " " + rs.getString("endpoint_path"),
+                    ignored -> new java.util.TreeMap<>()).put(rs.getInt("status_code"), rs.getLong("requests"));
+        }, applicationId, environmentId, environmentId, Timestamp.from(from), Timestamp.from(to));
         return jdbcTemplate.query("""
                 select
                     ae.http_method,
                     ae.endpoint_path,
                     coalesce(sum(h.request_count), 0) as total_requests,
-                    coalesce(sum(h.success_count), 0) as success_count,
-                    coalesce(sum(h.error_count), 0) as failure_count,
+                    coalesce(sum(h.request_count) filter (where h.status_code between 200 and 399), 0) as success_count,
+                    coalesce(sum(h.request_count) filter (where h.status_code >= 400), 0) as failure_count,
                     max(h.last_seen) as last_seen
                 from api_endpoints ae
                 join endpoint_usage_hourly h on h.endpoint_id = ae.id
                 where ae.application_id = ?
+                  and (?::bigint is null or ae.environment_id = ?)
                   and h.last_seen >= ?
                   and h.first_seen <= ?
                 group by ae.http_method, ae.endpoint_path
@@ -81,8 +94,9 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                     rs.getLong("total_requests"),
                     rs.getLong("success_count"),
                     rs.getLong("failure_count"),
-                    lastSeen == null ? null : lastSeen.toInstant());
-        }, applicationId, Timestamp.from(from), Timestamp.from(to));
+                    lastSeen == null ? null : lastSeen.toInstant(),
+                    statuses.getOrDefault(rs.getString("http_method") + " " + rs.getString("endpoint_path"), java.util.Map.of()));
+        }, applicationId, environmentId, environmentId, Timestamp.from(from), Timestamp.from(to));
     }
 
     @Override
@@ -92,7 +106,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                                                     String clientId,
                                                     String clientVersion,
                                                     Instant from,
-                                                    Instant to) {
+                                                    Instant to, Long environmentId) {
         Instant effectiveFrom = from == null ? Instant.EPOCH : from;
         Instant effectiveTo = to == null ? Instant.now() : to;
 
@@ -100,8 +114,9 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 .findByProjectIdAndOwnerId(projectId, ownerId)
                 .orElseThrow(ApplicationNotFoundException::new);
 
+        String environmentName = validateEnvironment(application, environmentId);
         List<FieldAnalyticsItem> fields = queryFieldAnalytics(
-                application.getId(),
+                application.getId(), environmentId,
                 normalizeBlank(endpoint),
                 normalizeBlank(clientId),
                 normalizeBlank(clientVersion),
@@ -111,7 +126,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         return new FieldAnalyticsResponse(
                 application.getProjectId(),
                 application.getName(),
-                application.getEnvironment(),
+                environmentName,
                 fields);
     }
 
@@ -120,7 +135,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                                                                String projectId,
                                                                String endpoint,
                                                                Instant from,
-                                                               Instant to) {
+                                                               Instant to, Long environmentId) {
         Instant effectiveFrom = from == null ? Instant.EPOCH : from;
         Instant effectiveTo = to == null ? Instant.now() : to;
 
@@ -128,8 +143,9 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 .findByProjectIdAndOwnerId(projectId, ownerId)
                 .orElseThrow(ApplicationNotFoundException::new);
 
+        String environmentName = validateEnvironment(application, environmentId);
         List<SchemaFieldAnalyticsItem> fields = querySchemaFieldAnalytics(
-                application.getId(),
+                application.getId(), environmentId,
                 normalizeBlank(endpoint),
                 effectiveFrom,
                 effectiveTo);
@@ -137,11 +153,11 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         return new SchemaFieldAnalyticsResponse(
                 application.getProjectId(),
                 application.getName(),
-                application.getEnvironment(),
+                environmentName,
                 fields);
     }
 
-    private List<FieldAnalyticsItem> queryFieldAnalytics(Long applicationId,
+    private List<FieldAnalyticsItem> queryFieldAnalytics(Long applicationId, Long environmentId,
                                                          String endpoint,
                                                          String clientId,
                                                          String clientVersion,
@@ -158,7 +174,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                     coalesce(sum(h.access_count), 0) as total_accesses,
                     min(o.first_seen) as first_seen,
                     max(o.last_seen) as last_seen,
-                    max(h.last_seen) as last_accessed
+                     max(h.last_accessed) as last_accessed
                 from observed_fields o
                 left join field_usage_hourly h
                   on h.application_id = o.application_id
@@ -166,6 +182,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                  and h.endpoint = o.endpoint
                  and coalesce(h.schema_name, '') = coalesce(o.schema_name, '')
                  and h.field_path = o.field_path
+                 and h.endpoint_id in (select id from api_endpoints where environment_id is not distinct from o.environment_id)
                  and h.last_seen >= ?
                  and h.first_seen <= ?
                 """);
@@ -185,10 +202,13 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
         sql.append("""
                 where o.application_id = ?
+                  and (?::bigint is null or o.environment_id = ?)
                   and o.first_seen <= ?
                   and o.last_seen >= ?
                 """);
         params.add(applicationId);
+        params.add(environmentId);
+        params.add(environmentId);
         params.add(Timestamp.from(to));
         params.add(Timestamp.from(from));
 
@@ -229,7 +249,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         }, params.toArray());
     }
 
-    private List<SchemaFieldAnalyticsItem> querySchemaFieldAnalytics(Long applicationId,
+    private List<SchemaFieldAnalyticsItem> querySchemaFieldAnalytics(Long applicationId, Long environmentId,
                                                                     String endpoint,
                                                                     Instant from,
                                                                     Instant to) {
@@ -247,11 +267,12 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                         endpoint,
                         field_path,
                         sum(access_count) as total_accesses,
-                        max(last_seen) as last_accessed
+                        max(last_accessed) as last_accessed
                     from field_usage_hourly
                     where application_id = ?
                       and last_seen >= ?
                       and first_seen <= ?
+                      and (?::bigint is null or endpoint_id in (select id from api_endpoints where environment_id = ?))
                     group by application_id, http_method, endpoint, field_path
                 )
                 select
@@ -283,6 +304,8 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         params.add(applicationId);
         params.add(Timestamp.from(from));
         params.add(Timestamp.from(to));
+        params.add(environmentId);
+        params.add(environmentId);
         params.add(applicationId);
 
         if (endpoint != null) {
@@ -328,5 +351,12 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     private String normalizeBlank(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private String validateEnvironment(Application application, Long environmentId) {
+        if (environmentId == null) return "All environments";
+        return jdbcTemplate.query("select name from environments where id = ? and application_id = ?",
+                (rs, row) -> rs.getString(1), environmentId, application.getId()).stream().findFirst()
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Environment not found"));
     }
 }

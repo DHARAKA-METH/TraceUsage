@@ -49,17 +49,13 @@ public class EndpointUsageAggregationService {
             insert into endpoint_usage_hourly (
                 endpoint_id,
                 hour_bucket,
-                request_count,
-                success_count,
-                error_count,
+                status_code, request_count,
                 first_seen,
                 last_seen
-            ) values (?, ?, ?, ?, ?, ?, ?)
-            on conflict (endpoint_id, hour_bucket)
+            ) values (?, ?, ?, ?, ?, ?)
+            on conflict (endpoint_id, hour_bucket, status_code)
             do update set
                 request_count = endpoint_usage_hourly.request_count + excluded.request_count,
-                success_count = endpoint_usage_hourly.success_count + excluded.success_count,
-                error_count = endpoint_usage_hourly.error_count + excluded.error_count,
                 first_seen = least(endpoint_usage_hourly.first_seen, excluded.first_seen),
                 last_seen = greatest(endpoint_usage_hourly.last_seen, excluded.last_seen)
             """;
@@ -137,7 +133,7 @@ public class EndpointUsageAggregationService {
             aggregates.computeIfAbsent(
                     new AggregateKey(
                             pending.endpoint().getId(),
-                            TimeBucket.hour(event.getOccurredAt())),
+                            TimeBucket.hour(event.getOccurredAt()), event.getStatusCode()),
                     key -> new Aggregate(event.getOccurredAt()))
                     .add(event.getStatusCode(), event.getOccurredAt());
         }
@@ -160,8 +156,9 @@ public class EndpointUsageAggregationService {
         if (accepted > 0) {
             increment(acceptedCounter, accepted);
         }
-        long errorTotal = aggregates.values().stream()
-                .mapToLong(Aggregate::errorCount)
+        long errorTotal = aggregates.entrySet().stream()
+                .filter(entry -> entry.getKey().statusCode() >= 400)
+                .mapToLong(entry -> entry.getValue().requestCount)
                 .sum();
         if (errorTotal > 0) {
             increment(errorCounter, errorTotal);
@@ -221,14 +218,12 @@ public class EndpointUsageAggregationService {
     public record PendingEndpointEvent(ApiEndpoint endpoint, UsageEvent event) {
     }
 
-    private record AggregateKey(Long endpointId, Instant hourBucket) {
+    private record AggregateKey(Long endpointId, Instant hourBucket, int statusCode) {
     }
 
     private static final class Aggregate {
 
         private long requestCount;
-        private long successCount;
-        private long errorCount;
         private Instant firstSeen;
         private Instant lastSeen;
 
@@ -239,11 +234,6 @@ public class EndpointUsageAggregationService {
 
         private void add(int statusCode, Instant occurredAt) {
             requestCount++;
-            if (statusCode >= 400) {
-                errorCount++;
-            } else if (statusCode >= 200 && statusCode <= 399) {
-                successCount++;
-            }
 
             if (occurredAt.isBefore(firstSeen)) {
                 firstSeen = occurredAt;
@@ -253,17 +243,9 @@ public class EndpointUsageAggregationService {
             }
         }
 
-        private long errorCount() {
-            return errorCount;
-        }
-
         private Object[] toRow(AggregateKey key) {
             return new Object[]{
-                    key.endpointId(),
-                    Timestamp.from(key.hourBucket()),
-                    requestCount,
-                    successCount,
-                    errorCount,
+                    key.endpointId(), Timestamp.from(key.hourBucket()), key.statusCode(), requestCount,
                     Timestamp.from(firstSeen),
                     Timestamp.from(lastSeen)};
         }
